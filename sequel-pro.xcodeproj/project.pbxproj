@@ -536,6 +536,20 @@
 			remoteGlobalIDString = 58CDB3350FCE13C900F8ACA3;
 			remoteInfo = TunnelPassphraseRequester;
 		};
+		AF31026D1A2EA2B500D1E26A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = AF31024C1A2EA2B400D1E26A;
+			remoteInfo = SPPostgreSQLFramework;
+		};
+		AF31026F1A2EA2B500D1E26A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = AF3102571A2EA2B400D1E26A;
+			remoteInfo = SPPostgreSQLFrameworkTests;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -1124,6 +1138,7 @@
 		58FEF57C0F3B4E9700518E8E /* SPTableData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPTableData.h; sourceTree = "<group>"; };
 		58FEF57D0F3B4E9700518E8E /* SPTableData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPTableData.m; sourceTree = "<group>"; };
 		8D15AC370486D014006FF6A4 /* Sequel Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Sequel Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SPPostgreSQLFramework.xcodeproj; path = Frameworks/SPPostgreSQLFramework/SPPostgreSQLFramework.xcodeproj; sourceTree = "<group>"; };
 		B51D6B9D114C310C0074704E /* toolbar-switch-to-table-triggers.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "toolbar-switch-to-table-triggers.png"; sourceTree = "<group>"; };
 		B52460D30F8EF92300171639 /* SPArrayAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPArrayAdditions.h; sourceTree = "<group>"; };
 		B52460D40F8EF92300171639 /* SPArrayAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPArrayAdditions.m; sourceTree = "<group>"; };
@@ -2256,6 +2271,7 @@
 				17E5954E14F304000054EE08 /* QueryKit.xcodeproj */,
 				584D876015140D3500F24774 /* SPMySQLFramework.xcodeproj */,
 				58B906F811BD9B34000826E5 /* PSMTabBar */,
+				AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */,
 			);
 			name = Frameworks;
 			path = ..;
@@ -2532,6 +2548,15 @@
 			name = Parsing;
 			sourceTree = "<group>";
 		};
+		AF3102691A2EA2B400D1E26A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AF31026E1A2EA2B500D1E26A /* SPPostgreSQLFramework.framework */,
+				AF3102701A2EA2B500D1E26A /* SPPostgreSQLFrameworkTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		B57747D60F7A8990003B34F9 /* Category Additions */ = {
 			isa = PBXGroup;
 			children = (
@@ -2624,7 +2649,7 @@
 			name = "Unit Tests";
 			productName = "Unit Tests";
 			productReference = 380F4ED90FC0B50500B0BFD7 /* Unit Tests.octest */;
-			productType = "com.apple.product-type.bundle";
+			productType = "com.apple.product-type.bundle.ocunit-test";
 		};
 		584754C1120A04560057631F /* Sequel Pro QLGenerator */ = {
 			isa = PBXNativeTarget;
@@ -2751,6 +2776,10 @@
 					ProductGroup = 584D876115140D3500F24774 /* Products */;
 					ProjectRef = 584D876015140D3500F24774 /* SPMySQLFramework.xcodeproj */;
 				},
+				{
+					ProductGroup = AF3102691A2EA2B400D1E26A /* Products */;
+					ProjectRef = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
+				},
 			);
 			projectRoot = "";
 			targets = (
@@ -2785,6 +2814,20 @@
 			fileType = wrapper.framework;
 			path = SPMySQL.framework;
 			remoteRef = 584D876715140D3500F24774 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		AF31026E1A2EA2B500D1E26A /* SPPostgreSQLFramework.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SPPostgreSQLFramework.framework;
+			remoteRef = AF31026D1A2EA2B500D1E26A /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		AF3102701A2EA2B500D1E26A /* SPPostgreSQLFrameworkTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = SPPostgreSQLFrameworkTests.xctest;
+			remoteRef = AF31026F1A2EA2B500D1E26A /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
