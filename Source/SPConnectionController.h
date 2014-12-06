@@ -31,6 +31,7 @@
 #import "SPConnectionControllerDelegateProtocol.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @class SPDatabaseDocument, 
 	   SPFavoritesController, 
@@ -38,6 +39,7 @@
 	   SPTreeNode,
 	   SPFavoritesOutlineView,
        SPMySQLConnection,
+	   PGPostgresConnection,
 	   SPSplitView
 #ifndef SP_CODA /* class decl */
 	   ,SPKeychain, 
@@ -54,6 +56,7 @@
 	SPDatabaseDocument *dbDocument;
 	SPSSHTunnel *sshTunnel;
 	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 	
 #ifndef SP_CODA	/* ivars */
 	SPKeychain *keychain;

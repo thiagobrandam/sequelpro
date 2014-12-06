@@ -53,6 +53,7 @@
 #import "SPFavoriteColorSupport.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 // Constants
 #ifndef SP_CODA
@@ -289,7 +290,7 @@ static NSComparisonResult _compareFavoritesUsingKey(id favorite1, id favorite2, 
 	}
 
 	// ...or start the MySQL connection process directly
-	[self performSelector:@selector(initiateMySQLConnection) withObject:nil afterDelay:0.0];
+	[self performSelector:@selector(initiatePostgresConnection) withObject:nil afterDelay:0.0];
 }
 
 /**

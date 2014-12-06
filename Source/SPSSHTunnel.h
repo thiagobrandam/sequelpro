@@ -31,8 +31,9 @@
 //  More info at <https://github.com/sequelpro/sequelpro>
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
-@interface SPSSHTunnel : NSObject <SPMySQLConnectionProxy>
+@interface SPSSHTunnel : NSObject <PGPostgresConnectionProxy>
 {
 	id delegate;
 
@@ -57,7 +58,7 @@
 	NSInteger remotePort;
 	NSUInteger localPort;
 	NSUInteger localPortFallback;
-	SPMySQLConnectionProxyState connectionState;
+	PGPostgresConnectionProxyState connectionState;
     
     NSLock *answerAvailableLock;
     NSString *currentKeyName;

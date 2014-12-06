@@ -360,6 +360,8 @@
 		58FEF16D0F23D66600518E8E /* SPSQLParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 58FEF16C0F23D66600518E8E /* SPSQLParser.m */; };
 		58FEF57E0F3B4E9700518E8E /* SPTableData.m in Sources */ = {isa = PBXBuildFile; fileRef = 58FEF57D0F3B4E9700518E8E /* SPTableData.m */; };
 		8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */; };
+		AFAF96901A3140B20018F735 /* PostgresKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AFAF968B1A313F9C0018F735 /* PostgresKit.framework */; };
+		AFAF96961A31E0680018F735 /* PostgresKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = AFAF968B1A313F9C0018F735 /* PostgresKit.framework */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B51D6B9E114C310C0074704E /* toolbar-switch-to-table-triggers.png in Resources */ = {isa = PBXBuildFile; fileRef = B51D6B9D114C310C0074704E /* toolbar-switch-to-table-triggers.png */; };
 		B52460D70F8EF92300171639 /* SPArrayAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = B52460D40F8EF92300171639 /* SPArrayAdditions.m */; };
 		B52460D80F8EF92300171639 /* SPTextViewAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = B52460D60F8EF92300171639 /* SPTextViewAdditions.m */; };
@@ -536,19 +538,26 @@
 			remoteGlobalIDString = 58CDB3350FCE13C900F8ACA3;
 			remoteInfo = TunnelPassphraseRequester;
 		};
-		AF31026D1A2EA2B500D1E26A /* PBXContainerItemProxy */ = {
+		AFAF968A1A313F9C0018F735 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
+			containerPortal = AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = AF31024C1A2EA2B400D1E26A;
-			remoteInfo = SPPostgreSQLFramework;
+			remoteGlobalIDString = 8DC2EF5B0486A6940098B216;
+			remoteInfo = PostgresKit;
 		};
-		AF31026F1A2EA2B500D1E26A /* PBXContainerItemProxy */ = {
+		AFAF968C1A313F9C0018F735 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
+			containerPortal = AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = AF3102571A2EA2B400D1E26A;
-			remoteInfo = SPPostgreSQLFrameworkTests;
+			remoteGlobalIDString = 1724CD0415FB68E800AB2291;
+			remoteInfo = Tests;
+		};
+		AFAF968E1A3140910018F735 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
+			remoteInfo = PostgresKit;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -570,6 +579,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				AFAF96961A31E0680018F735 /* PostgresKit.framework in Copy Frameworks */,
 				58B907FB11BDA5A9000826E5 /* PSMTabBar.framework in Copy Frameworks */,
 				4DECC4910EC2B436008D359E /* Growl.framework in Copy Frameworks */,
 				4DECC48F0EC2B436008D359E /* Sparkle.framework in Copy Frameworks */,
@@ -1138,7 +1148,7 @@
 		58FEF57C0F3B4E9700518E8E /* SPTableData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPTableData.h; sourceTree = "<group>"; };
 		58FEF57D0F3B4E9700518E8E /* SPTableData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPTableData.m; sourceTree = "<group>"; };
 		8D15AC370486D014006FF6A4 /* Sequel Pro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Sequel Pro.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SPPostgreSQLFramework.xcodeproj; path = Frameworks/SPPostgreSQLFramework/SPPostgreSQLFramework.xcodeproj; sourceTree = "<group>"; };
+		AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = PostgresKit.xcodeproj; path = Frameworks/PostgresKit/PostgresKit.xcodeproj; sourceTree = "<group>"; };
 		B51D6B9D114C310C0074704E /* toolbar-switch-to-table-triggers.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "toolbar-switch-to-table-triggers.png"; sourceTree = "<group>"; };
 		B52460D30F8EF92300171639 /* SPArrayAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPArrayAdditions.h; sourceTree = "<group>"; };
 		B52460D40F8EF92300171639 /* SPArrayAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPArrayAdditions.m; sourceTree = "<group>"; };
@@ -1304,6 +1314,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AFAF96901A3140B20018F735 /* PostgresKit.framework in Frameworks */,
 				17AED4161888BD67008E380F /* Security.framework in Frameworks */,
 				296DC8BF0F9091DF002A3258 /* libicucore.dylib in Frameworks */,
 				8D15AC340486D014006FF6A4 /* Cocoa.framework in Frameworks */,
@@ -2268,10 +2279,10 @@
 		17FC36AE141425D600AC3602 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */,
 				17E5954E14F304000054EE08 /* QueryKit.xcodeproj */,
 				584D876015140D3500F24774 /* SPMySQLFramework.xcodeproj */,
 				58B906F811BD9B34000826E5 /* PSMTabBar */,
-				AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */,
 			);
 			name = Frameworks;
 			path = ..;
@@ -2548,11 +2559,11 @@
 			name = Parsing;
 			sourceTree = "<group>";
 		};
-		AF3102691A2EA2B400D1E26A /* Products */ = {
+		AFAF96861A313F9B0018F735 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AF31026E1A2EA2B500D1E26A /* SPPostgreSQLFramework.framework */,
-				AF3102701A2EA2B500D1E26A /* SPPostgreSQLFrameworkTests.xctest */,
+				AFAF968B1A313F9C0018F735 /* PostgresKit.framework */,
+				AFAF968D1A313F9C0018F735 /* Tests.octest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2732,6 +2743,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				AFAF968F1A3140910018F735 /* PBXTargetDependency */,
 				584D877115140F5400F24774 /* PBXTargetDependency */,
 				58B907CD11BDA552000826E5 /* PBXTargetDependency */,
 				58CDB34B0FCE144000F8ACA3 /* PBXTargetDependency */,
@@ -2769,16 +2781,16 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
+					ProductGroup = AFAF96861A313F9B0018F735 /* Products */;
+					ProjectRef = AFAF96851A313F9B0018F735 /* PostgresKit.xcodeproj */;
+				},
+				{
 					ProductGroup = 17E5954F14F304000054EE08 /* Products */;
 					ProjectRef = 17E5954E14F304000054EE08 /* QueryKit.xcodeproj */;
 				},
 				{
 					ProductGroup = 584D876115140D3500F24774 /* Products */;
 					ProjectRef = 584D876015140D3500F24774 /* SPMySQLFramework.xcodeproj */;
-				},
-				{
-					ProductGroup = AF3102691A2EA2B400D1E26A /* Products */;
-					ProjectRef = AF3102681A2EA2B400D1E26A /* SPPostgreSQLFramework.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -2816,18 +2828,18 @@
 			remoteRef = 584D876715140D3500F24774 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		AF31026E1A2EA2B500D1E26A /* SPPostgreSQLFramework.framework */ = {
+		AFAF968B1A313F9C0018F735 /* PostgresKit.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
-			path = SPPostgreSQLFramework.framework;
-			remoteRef = AF31026D1A2EA2B500D1E26A /* PBXContainerItemProxy */;
+			path = PostgresKit.framework;
+			remoteRef = AFAF968A1A313F9C0018F735 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		AF3102701A2EA2B500D1E26A /* SPPostgreSQLFrameworkTests.xctest */ = {
+		AFAF968D1A313F9C0018F735 /* Tests.octest */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
-			path = SPPostgreSQLFrameworkTests.xctest;
-			remoteRef = AF31026F1A2EA2B500D1E26A /* PBXContainerItemProxy */;
+			path = Tests.octest;
+			remoteRef = AFAF968C1A313F9C0018F735 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -3350,6 +3362,11 @@
 			isa = PBXTargetDependency;
 			target = 58CDB3350FCE13C900F8ACA3 /* SequelProTunnelAssistant */;
 			targetProxy = 58CDB34A0FCE144000F8ACA3 /* PBXContainerItemProxy */;
+		};
+		AFAF968F1A3140910018F735 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PostgresKit;
+			targetProxy = AFAF968E1A3140910018F735 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

@@ -220,7 +220,7 @@
 {
 	localPort = 0;
 
-	if (connectionState != SPMySQLProxyIdle) return;
+	if (connectionState != PGPostgresProxyIdle) return;
 
 	[debugMessagesLock lock];
 	[debugMessages removeAllObjects];
@@ -237,18 +237,18 @@
  */
 - (void)launchTask:(id) dummy
 {
-	if (connectionState != SPMySQLProxyIdle || task) return;
+	if (connectionState != PGPostgresProxyIdle || task) return;
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 	NSMutableArray *taskArguments;
 	NSMutableDictionary *taskEnvironment;
 	NSString *authenticationAppPath;
 
-	connectionState = SPMySQLProxyConnecting;
+	connectionState = PGPostgresProxyConnecting;
 	if (delegate) [delegate performSelectorOnMainThread:stateChangeSelector withObject:self waitUntilDone:NO];
 
 	// Enforce a parent window being present for dialogs
 	if (!parentWindow) {
-		connectionState = SPMySQLProxyIdle;
+		connectionState = PGPostgresProxyIdle;
 		if (delegate) [delegate performSelectorOnMainThread:stateChangeSelector withObject:self waitUntilDone:NO];
 		if (lastError) [lastError release];
 		lastError = [[NSString alloc] initWithString:@"SSH Tunnel started without a parent window.  A parent window must be present."];
@@ -298,7 +298,7 @@
 		
 		// Abort if no local free port could be allocated
 		if (!localPort || (useHostFallback && !localPortFallback)) {
-			connectionState = SPMySQLProxyIdle;
+			connectionState = PGPostgresProxyIdle;
 			if (delegate) [delegate performSelectorOnMainThread:stateChangeSelector withObject:self waitUntilDone:NO];
 			if (lastError) [lastError release];
 			lastError = [[NSString alloc] initWithString:NSLocalizedString(@"No local port could be allocated for the SSH Tunnel.", @"SSH tunnel could not be created because no local port could be allocated")];
@@ -427,8 +427,8 @@
 												  object:nil];
 	
 	// If the task closed unexpectedly, alert appropriately
-	if (connectionState != SPMySQLProxyIdle) {
-		connectionState = SPMySQLProxyIdle;
+	if (connectionState != PGPostgresProxyIdle) {
+		connectionState = PGPostgresProxyIdle;
 		taskExitedUnexpectedly = YES;
 		if (lastError) [lastError release];
 		lastError = [[NSString alloc] initWithString:NSLocalizedString(@"The SSH Tunnel has unexpectedly closed.", @"SSH tunnel unexpectedly closed")];
@@ -449,7 +449,7 @@
  */
 - (void)disconnect
 {
-    if (connectionState == SPMySQLProxyIdle) return;
+    if (connectionState == PGPostgresProxyIdle) return;
 
 	// If there's a delegate set, clear it to prevent unexpected state change messaging
 	if (delegate) {

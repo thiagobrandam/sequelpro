@@ -61,11 +61,12 @@
 #import "SPConnectionControllerDelegateProtocol.h"
 
 #import <SPMySQL/SPMySQLConnectionDelegate.h>
+#import <PostgresKit/PGPostgresConnectionDelegate.h>
 
 /**
  * The SPDatabaseDocument class controls the primary database view window.
  */
-@interface SPDatabaseDocument : NSObject <SPConnectionControllerDelegateProtocol, SPMySQLConnectionDelegate, NSTextFieldDelegate, NSToolbarDelegate>
+@interface SPDatabaseDocument : NSObject <SPConnectionControllerDelegateProtocol, SPMySQLConnectionDelegate, PGPostgresConnectionDelegate, NSTextFieldDelegate, NSToolbarDelegate>
 {
 #ifdef SP_CODA /* patch */
 	id delegate;

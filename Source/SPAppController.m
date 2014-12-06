@@ -54,6 +54,8 @@
 #import <PSMTabBar/PSMTabBarControl.h>
 #import <Sparkle/Sparkle.h>
 
+#import <PostgresKit/PostgresKit.h>
+
 @interface SPAppController ()
 
 - (void)_copyDefaultThemes;

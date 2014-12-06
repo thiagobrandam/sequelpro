@@ -41,9 +41,12 @@
 
 - (void)initiateMySQLConnection;
 - (void)initiateMySQLConnectionInBackground;
+- (void)initiatePostgresConnection;
+- (void)initiatePostgresConnectionInBackground;
 - (void)initiateSSHTunnelConnection;
 
 - (void)mySQLConnectionEstablished;
+- (void)postgresConnectionEstablished;
 - (void)sshTunnelCallback:(SPSSHTunnel *)theTunnel;
 
 - (void)addConnectionToDocument;
