@@ -102,7 +102,6 @@
 
 - (BOOL)cancelCurrentQuery:(NSError **)error;
 
-- (NSString*)lastErrorMessage;
 - (NSInteger)lastErrorID;
 
 @end

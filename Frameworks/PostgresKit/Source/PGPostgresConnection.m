@@ -486,11 +486,6 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 
 #pragma mark Acochambração
 
-- (NSString*)lastErrorMessage
-{
-    return @"TODO: lastErrorMessage: Query and Preparation";
-}
-
 - (NSInteger)lastErrorID
 {
     return 666;
