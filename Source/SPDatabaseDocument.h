@@ -185,7 +185,8 @@
 #endif
 	
 	// Master connection
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 
 	// Controllers
 	SPConnectionController *connectionController;
@@ -205,7 +206,8 @@
 	BOOL relationsLoaded;
 
 	NSString *selectedDatabase;
-	NSString *mySQLVersion;
+//	NSString *mySQLVersion;
+	NSString *postgreSQLVersion;
 	NSString *selectedDatabaseEncoding;
 #ifndef SP_CODA /* ivars */
 	NSUserDefaults *prefs;
@@ -331,8 +333,10 @@
 
 // Connection callback and methods
 #endif
-- (void)setConnection:(SPMySQLConnection *)theConnection;
-- (SPMySQLConnection *)getConnection;
+//- (void)setConnection:(SPMySQLConnection *)theConnection;
+- (void)setConnection:(PGPostgresConnection *)theConnection;
+//- (SPMySQLConnection *)getConnection;
+- (PGPostgresConnection *)getConnection;
 - (void)setKeychainID:(NSString *)theID;
 
 // Database methods

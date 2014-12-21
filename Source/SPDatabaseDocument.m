@@ -203,8 +203,10 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 		selectedDatabase = nil;
 		selectedDatabaseEncoding = [[NSString alloc] initWithString:@"latin1"];
-		mySQLConnection = nil;
-		mySQLVersion = nil;
+//		mySQLConnection = nil;
+//		mySQLVersion = nil;
+		postgresConnection = nil;
+		postgreSQLVersion = nil;
 		allDatabases = nil;
 		allSystemDatabases = nil;
 		gotoDatabaseController = nil;
@@ -445,20 +447,23 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 #pragma mark -
 #pragma mark Connection callback and methods
 
-- (void)setConnection:(SPMySQLConnection *)theConnection
+//- (void)setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
+	// TODO: do proper userTriggeredDisconnect in Postgres connection classs
 	if ([theConnection userTriggeredDisconnect]) {
 		return;
 	}
 
 	_isConnected = YES;
-	mySQLConnection = [theConnection retain];
+	postgresConnection = [theConnection retain];
 	
 	// Now that we have a connection, determine what functionality the database supports.
 	// Note that this must be done before anything else as it's used by nearly all of the main controllers.
-	serverSupport = [[SPServerSupport alloc] initWithMajorVersion:[mySQLConnection serverMajorVersion] 
-															minor:[mySQLConnection serverMinorVersion] 
-														  release:[mySQLConnection serverReleaseVersion]];
+	// TODO: do proper serverSupport
+	serverSupport = [[SPServerSupport alloc] initWithMajorVersion:5
+															minor:5
+														  release:1];
 														  
 #ifndef SP_CODA	
 	// Set the fileURL and init the preferences (query favs, filters, and history) if available for that URL 
@@ -469,7 +474,9 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 #endif
 
 	// Get the mysql version
-	mySQLVersion = [[NSString alloc] initWithString:[mySQLConnection serverVersionString]];
+//	mySQLVersion = [[NSString alloc] initWithString:[mySQLConnection serverVersionString]];
+//	postgreSQLVersion = [[NSString alloc] initWithFormat:@"%lu" arguments:[theConnection serverVersion]];
+	postgreSQLVersion = [[NSString alloc] initWithFormat:@"%lu", (unsigned long)[theConnection serverVersion]];
 
 	// Update the selected database if appropriate
 	if ([connectionController database] && ![[connectionController database] isEqualToString:@""]) {
@@ -481,7 +488,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	}
 
 	// Ensure the connection encoding is set to utf8 for database/table name retrieval
-	[mySQLConnection setEncoding:@"utf8"];
+	[postgresConnection setEncoding:@"utf8"];
 
 	// Update the database list
 	[self setDatabases:self];
@@ -6253,8 +6260,16 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 {
 	NSLog(@"PG Connection Failed");
 	
-	NSString *errorMessage = [NSString stringWithFormat:NSLocalizedString(@"Unable to connect to host %@ because access was denied.\n\nDouble-check your username and password and ensure that access from your current location is permitted.\n\nPostgreSQL said: %@", @"message of panel when connection to host failed due to access denied error"), [connectionController host], [connection connectionError]];
-	[[connectionController onMainThread] failConnectionWithTitle:NSLocalizedString(@"Access denied!", @"connection failed due to access denied title") errorMessage:errorMessage detail:nil rawErrorText:[connection connectionError]];
+	NSString *errorMessage;
+	
+	if ([[connection connectionErrorType] isEqualTo:@"CONNECTION_BAD"]) {
+		errorMessage = [NSString stringWithFormat:NSLocalizedString(@"Unable to connect via the socket, or the request timed out.\n\nDouble-check that the socket path is correct and that you have the necessary privileges, and that the server is running.\n\nPostgreSQL said: %@", @"message of panel when connection to host failed"), [connection connectionError]];
+		[[connectionController onMainThread] failConnectionWithTitle:NSLocalizedString(@"Socket connection failed!", @"socket connection failed title") errorMessage:errorMessage detail:nil rawErrorText:[connection connectionError]];
+	}
+	else {
+		errorMessage = [NSString stringWithFormat:NSLocalizedString(@"Unable to connect to host %@ because access was denied.\n\nDouble-check your username and password and ensure that access from your current location is permitted.\n\nPostgreSQL said: %@", @"message of panel when connection to host failed due to access denied error"), [connectionController host], [connection connectionError]];
+		[[connectionController onMainThread] failConnectionWithTitle:NSLocalizedString(@"Access denied!", @"connection failed due to access denied title") errorMessage:errorMessage detail:nil rawErrorText:[connection connectionError]];
+	}
 }
 
 - (void)connectionEstablished:(PGPostgresConnection *)connection

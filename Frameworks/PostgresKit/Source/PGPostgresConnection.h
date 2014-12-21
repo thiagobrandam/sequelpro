@@ -74,6 +74,7 @@
 
 @property (readonly) NSString *encoding;
 @property (readonly) NSString *connectionError;
+@property (readonly) NSString *connectionErrorType;
 @property (readonly) PGPostgresError *lastError;
 @property (readonly) NSStringEncoding stringEncoding;
 @property (readonly) PGPostgresConnectionParameters *parameters;
@@ -102,5 +103,6 @@
 - (BOOL)cancelCurrentQuery:(NSError **)error;
 
 - (NSInteger)lastErrorID;
+- (BOOL)userTriggeredDisconnect;
 
 @end

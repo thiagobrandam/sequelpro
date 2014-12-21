@@ -262,6 +262,69 @@ static NSString *SPLocalhostAddress = @"127.0.0.1";
 //	[pool release];
 }
 
+/**
+ * Called on the main thread once the MySQL connection is established on the background thread. Either the
+ * connection was cancelled or it was successful.
+ */
+- (void)postgresConnectionEstablished
+{
+	isConnecting = NO;
+	
+	// If the user is only testing the connection, kill the connection
+	// once established and reset the UI.  Also catch connection cancels.
+	if (isTestingConnection || cancellingConnection) {
+		
+		// Clean up any connections remaining, and reset the UI
+		[self cancelConnection:self];
+		
+		if (isTestingConnection) {
+			[self _showConnectionTestResult:NSLocalizedString(@"Connection succeeded", @"Connection success very short status message")];
+		}
+		
+		return;
+	}
+	
+#ifndef SP_CODA
+	[progressIndicatorText setStringValue:NSLocalizedString(@"Connected", @"connection established message")];
+	[progressIndicatorText display];
+#endif
+	
+	// Stop the current tab's progress indicator
+	[dbDocument setIsProcessing:NO];
+	
+	// Successful connection!
+#ifndef SP_CODA
+	[connectButton setEnabled:NO];
+	[connectButton display];
+	[progressIndicator stopAnimation:self];
+	[progressIndicatorText setHidden:YES];
+#endif
+	
+	// If SSL was enabled, check it was established correctly
+//	if (useSSL && ([self type] == SPTCPIPConnection || [self type] == SPSocketConnection)) {
+//		if (![mySQLConnection isConnectedViaSSL]) {
+//			SPBeginAlertSheet(NSLocalizedString(@"SSL connection not established", @"SSL requested but not used title"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], nil, nil, nil, NSLocalizedString(@"You requested that the connection should be established using SSL, but MySQL made the connection without SSL.\n\nThis may be because the server does not support SSL connections, or has SSL disabled; or insufficient details were supplied to establish an SSL connection.\n\nThis connection is not encrypted.", @"SSL connection requested but not established error detail"));
+//		}
+//		else {
+//#ifndef SP_CODA
+//			[dbDocument setStatusIconToImageWithName:@"titlebarlock"];
+//#endif
+//		}
+//	}
+	
+#ifndef SP_CODA
+	// Re-enable favorites table view
+	[favoritesOutlineView setEnabled:YES];
+	[(NSView *)favoritesOutlineView display];
+#endif
+	
+	// Release the tunnel if set - will now be retained by the connection
+	if (sshTunnel) [sshTunnel release], sshTunnel = nil;
+	
+	// Pass the connection to the document and clean up the interface
+	[self addConnectionToDocument];
+}
+
 #pragma mark -
 #pragma mark MySQL
 
@@ -627,7 +690,7 @@ static NSString *SPLocalhostAddress = @"127.0.0.1";
 	
 	// Pass the connection to the table document, allowing it to set
 	// up the other classes and the rest of the interface.
-	[dbDocument setConnection:mySQLConnection];
+	[dbDocument setConnection:postgresConnection];
 }
 
 /**

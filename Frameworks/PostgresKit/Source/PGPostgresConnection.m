@@ -181,9 +181,15 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
     
 	if (!_connection || PQstatus(_connection) == CONNECTION_BAD) {
 		
-		if (_connectionError) [_connectionError release];
-		
-		_connectionError = [[NSString alloc] initWithUTF8String:PQerrorMessage(_connection)];
+        if (_connectionErrorType) [_connectionErrorType release];
+        if (_connectionError) [_connectionError release];
+        
+        _connectionError = [[NSString alloc] initWithUTF8String:PQerrorMessage(_connection)];
+        _connectionErrorType = @"CONNECTION_BAD";
+        
+        if (_delegate && [_delegate respondsToSelector:@selector(connectionFailed:)]) {
+            [_delegate performSelectorOnMainThread:@selector(connectionFailed:) withObject:self waitUntilDone:NO];
+        }
 		
 		PQfinish(_connection);
 		
@@ -317,7 +323,7 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 	fdinfo[0].events = POLLIN|POLLOUT;
 	
 	PostgresPollingStatusType status;
-	
+    
 	do
 	{
 		status = reset ? PQresetPoll(_connection) : PQconnectPoll(_connection);
@@ -336,8 +342,11 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
         NSLog(@"Poll failed");
         
         if (_connectionError) [_connectionError release];
+        if (_connectionErrorType) [_connectionErrorType release];
         
         _connectionError = [[NSString alloc] initWithUTF8String:PQerrorMessage(_connection)];
+        _connectionErrorType = @"CONNECTION_POLL_FAILED";
+        
                 
         if (_delegate && [_delegate respondsToSelector:@selector(connectionFailed:)]) {
             [_delegate performSelectorOnMainThread:@selector(connectionFailed:) withObject:self waitUntilDone:NO];
@@ -519,6 +528,16 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 - (NSInteger)lastErrorID
 {
     return 666;
+}
+
+/**
+ * Returns YES if the user chose to disconnect at the last "connection failure"
+ * prompt, NO otherwise.  This can be used to alter behaviour in response to state
+ * changes.
+ */
+- (BOOL)userTriggeredDisconnect
+{
+    return NO;
 }
 
 @end
