@@ -50,6 +50,7 @@
 ;
 
 @interface SPConnectionController : NSViewController <SPMySQLConnectionDelegate>
+//@interface SPConnectionController : NSViewController <PGPostgresConnectionDelegate>
 {
 	id <SPConnectionControllerDelegateProtocol, NSObject> delegate;
 	

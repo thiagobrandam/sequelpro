@@ -39,7 +39,6 @@
 	NSString *_encoding;
 	NSString *_connectionError;
 	NSString *_applicationName;
-	
 	const char **_connectionParamNames;
 	const char **_connectionParamValues;
 	

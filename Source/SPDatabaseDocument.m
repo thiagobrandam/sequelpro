@@ -6247,6 +6247,30 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 #endif
 
 #pragma mark -
+#pragma mark PGPostgresConnection Delegate protocol
+
+#pragma mark PGPostgresConnectionDelegate protocol
+
+- (void)connectionFailed:(PGPostgresConnection *)connection
+{
+	NSLog(@"PG Connection Failed");
+	
+	NSString *errorMessage = [NSString stringWithFormat:NSLocalizedString(@"Unable to connect to host %@ because access was denied.\n\nDouble-check your username and password and ensure that access from your current location is permitted.\n\nMySQL said: %@", @"message of panel when connection to host failed due to access denied error"), [self host], [connection lastErrorMessage]];
+						[[self onMainThread] failConnectionWithTitle:NSLocalizedString(@"Access denied!", @"connection failed due to access denied title") errorMessage:errorMessage detail:nil rawErrorText:[postgresConnection lastErrorMessage]];
+}
+
+- (void)connectionEstablished:(PGPostgresConnection *)connection
+{
+	NSLog(@"PG Connection Established");
+}
+
+- (void)connection:(PGPostgresConnection *)connection notice:(NSString *)notice
+{
+	NSLog(@"%@", notice);
+}
+
+
+#pragma mark -
 
 - (void)dealloc
 {

@@ -287,7 +287,7 @@ const char *SPMySQLSSLPermissibleCiphers = "DHE-RSA-AES256-SHA:AES256-SHA:DHE-RS
 - (BOOL)isConnected
 {
 
-	// If the connection has been allowed to drop in the background, restore it if posslbe
+	// If the connection has been allowed to drop in the background, restore it if possible
 	if (state == SPMySQLConnectionLostInBackground) {
 		[self _reconnectAllowingRetries:YES];
 	}

@@ -158,129 +158,129 @@ static NSComparisonResult _compareFavoritesUsingKey(id favorite1, id favorite2, 
 {
 	// If this action was triggered via a double-click on the favorites outline view,
 	// ensure that one of the connections was double-clicked, not the area above or below
-//#ifndef SP_CODA
-//	if (sender == favoritesOutlineView && [favoritesOutlineView clickedRow] <= 0) return;
-//#endif
-//	
-//	// If triggered via the "Test Connection" button, set the state - otherwise clear it
-//	isTestingConnection = (sender == testConnectButton);
+#ifndef SP_CODA
+	if (sender == favoritesOutlineView && [favoritesOutlineView clickedRow] <= 0) return;
+#endif
+
+	// If triggered via the "Test Connection" button, set the state - otherwise clear it
+	isTestingConnection = (sender == testConnectButton);
+
+	// Ensure that host is not empty if this is a TCP/IP or SSH connection
+	if (([self type] == SPTCPIPConnection || [self type] == SPSSHTunnelConnection) && ![[self host] length]) {
+		SPBeginAlertSheet(NSLocalizedString(@"Insufficient connection details", @"insufficient details message"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"Insufficient details provided to establish a connection. Please enter at least the hostname.", @"insufficient details informative message"));		
+		return;
+	}
 //
-//	// Ensure that host is not empty if this is a TCP/IP or SSH connection
-//	if (([self type] == SPTCPIPConnection || [self type] == SPSSHTunnelConnection) && ![[self host] length]) {
-//		SPBeginAlertSheet(NSLocalizedString(@"Insufficient connection details", @"insufficient details message"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"Insufficient details provided to establish a connection. Please enter at least the hostname.", @"insufficient details informative message"));		
-//		return;
-//	}
+	// If SSH is enabled, ensure that the SSH host is not nil
+	if ([self type] == SPSSHTunnelConnection && ![[self sshHost] length]) {
+		SPBeginAlertSheet(NSLocalizedString(@"Insufficient connection details", @"insufficient details message"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"Insufficient details provided to establish a connection. Please enter the hostname for the SSH Tunnel, or disable the SSH Tunnel.", @"insufficient SSH tunnel details informative message"));
+		return;
+	}
+
+	// If an SSH key has been provided, verify it exists
+	if ([self type] == SPSSHTunnelConnection && sshKeyLocationEnabled && sshKeyLocation) {
+		if (![[NSFileManager defaultManager] fileExistsAtPath:[sshKeyLocation stringByExpandingTildeInPath]]) {
+			[self setSshKeyLocationEnabled:NSOffState];
+			SPBeginAlertSheet(NSLocalizedString(@"SSH Key not found", @"SSH key check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSH key location was specified, but no file was found in the specified location.  Please re-select the key and try again.", @"SSH key not found message"));
+			return;
+		}
+	}
 //
-//	// If SSH is enabled, ensure that the SSH host is not nil
-//	if ([self type] == SPSSHTunnelConnection && ![[self sshHost] length]) {
-//		SPBeginAlertSheet(NSLocalizedString(@"Insufficient connection details", @"insufficient details message"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"Insufficient details provided to establish a connection. Please enter the hostname for the SSH Tunnel, or disable the SSH Tunnel.", @"insufficient SSH tunnel details informative message"));
-//		return;
-//	}
+	// Ensure that a socket connection is not inadvertently used
+	if (![self _checkHost]) return;
 //
-//	// If an SSH key has been provided, verify it exists
-//	if ([self type] == SPSSHTunnelConnection && sshKeyLocationEnabled && sshKeyLocation) {
-//		if (![[NSFileManager defaultManager] fileExistsAtPath:[sshKeyLocation stringByExpandingTildeInPath]]) {
-//			[self setSshKeyLocationEnabled:NSOffState];
-//			SPBeginAlertSheet(NSLocalizedString(@"SSH Key not found", @"SSH key check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSH key location was specified, but no file was found in the specified location.  Please re-select the key and try again.", @"SSH key not found message"));
-//			return;
-//		}
-//	}
+	// If SSL keys have been supplied, verify they exist
+	if (([self type] == SPTCPIPConnection || [self type] == SPSocketConnection) && [self useSSL]) {
+		
+		if (sslKeyFileLocationEnabled && sslKeyFileLocation && 
+			![[NSFileManager defaultManager] fileExistsAtPath:[sslKeyFileLocation stringByExpandingTildeInPath]])
+		{
+			[self setSslKeyFileLocationEnabled:NSOffState];
+			[self setSslKeyFileLocation:nil];
+			
+			SPBeginAlertSheet(NSLocalizedString(@"SSL Key File not found", @"SSL key file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL key file location was specified, but no file was found in the specified location.  Please re-select the key file and try again.", @"SSL key file not found message"));
+			
+			return;
+		}
+		
+		if (sslCertificateFileLocationEnabled && sslCertificateFileLocation && 
+			![[NSFileManager defaultManager] fileExistsAtPath:[sslCertificateFileLocation stringByExpandingTildeInPath]])
+		{
+			[self setSslCertificateFileLocationEnabled:NSOffState];
+			[self setSslCertificateFileLocation:nil];
+			
+			SPBeginAlertSheet(NSLocalizedString(@"SSL Certificate File not found", @"SSL certificate file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL certificate location was specified, but no file was found in the specified location.  Please re-select the certificate and try again.", @"SSL certificate file not found message"));
+			
+			return;
+		}
+		
+		if (sslCACertFileLocationEnabled && sslCACertFileLocation && 
+			![[NSFileManager defaultManager] fileExistsAtPath:[sslCACertFileLocation stringByExpandingTildeInPath]])
+		{
+			[self setSslCACertFileLocationEnabled:NSOffState];
+			[self setSslCACertFileLocation:nil];
+			
+			SPBeginAlertSheet(NSLocalizedString(@"SSL Certificate Authority File not found", @"SSL certificate authority file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL Certificate Authority certificate location was specified, but no file was found in the specified location.  Please re-select the Certificate Authority certificate and try again.", @"SSL CA certificate file not found message"));
+			
+			return;
+		}
+	}
+
+	// Basic details have validated - start the connection process animating
+	isConnecting = YES;
+	cancellingConnection = NO;
 //
-//	// Ensure that a socket connection is not inadvertently used
-//	if (![self _checkHost]) return;
+#ifndef SP_CODA
+	// Disable the favorites outline view to prevent further connections attempts
+	[favoritesOutlineView setEnabled:NO];
+
+	[helpButton setHidden:YES];
+	[connectButton setEnabled:NO];
+	[testConnectButton setEnabled:NO];
+	[progressIndicator startAnimation:self];
+	[progressIndicatorText setHidden:NO];
+#endif
 //
-//	// If SSL keys have been supplied, verify they exist
-//	if (([self type] == SPTCPIPConnection || [self type] == SPSocketConnection) && [self useSSL]) {
-//		
-//		if (sslKeyFileLocationEnabled && sslKeyFileLocation && 
-//			![[NSFileManager defaultManager] fileExistsAtPath:[sslKeyFileLocation stringByExpandingTildeInPath]])
-//		{
-//			[self setSslKeyFileLocationEnabled:NSOffState];
-//			[self setSslKeyFileLocation:nil];
-//			
-//			SPBeginAlertSheet(NSLocalizedString(@"SSL Key File not found", @"SSL key file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL key file location was specified, but no file was found in the specified location.  Please re-select the key file and try again.", @"SSL key file not found message"));
-//			
-//			return;
-//		}
-//		
-//		if (sslCertificateFileLocationEnabled && sslCertificateFileLocation && 
-//			![[NSFileManager defaultManager] fileExistsAtPath:[sslCertificateFileLocation stringByExpandingTildeInPath]])
-//		{
-//			[self setSslCertificateFileLocationEnabled:NSOffState];
-//			[self setSslCertificateFileLocation:nil];
-//			
-//			SPBeginAlertSheet(NSLocalizedString(@"SSL Certificate File not found", @"SSL certificate file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL certificate location was specified, but no file was found in the specified location.  Please re-select the certificate and try again.", @"SSL certificate file not found message"));
-//			
-//			return;
-//		}
-//		
-//		if (sslCACertFileLocationEnabled && sslCACertFileLocation && 
-//			![[NSFileManager defaultManager] fileExistsAtPath:[sslCACertFileLocation stringByExpandingTildeInPath]])
-//		{
-//			[self setSslCACertFileLocationEnabled:NSOffState];
-//			[self setSslCACertFileLocation:nil];
-//			
-//			SPBeginAlertSheet(NSLocalizedString(@"SSL Certificate Authority File not found", @"SSL certificate authority file check error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [dbDocument parentWindow], self, nil, nil, NSLocalizedString(@"A SSL Certificate Authority certificate location was specified, but no file was found in the specified location.  Please re-select the Certificate Authority certificate and try again.", @"SSL CA certificate file not found message"));
-//			
-//			return;
-//		}
-//	}
-//
-//	// Basic details have validated - start the connection process animating
-//	isConnecting = YES;
-//	cancellingConnection = NO;
-//
-//#ifndef SP_CODA
-//	// Disable the favorites outline view to prevent further connections attempts
-//	[favoritesOutlineView setEnabled:NO];
-//
-//	[helpButton setHidden:YES];
-//	[connectButton setEnabled:NO];
-//	[testConnectButton setEnabled:NO];
-//	[progressIndicator startAnimation:self];
-//	[progressIndicatorText setHidden:NO];
-//#endif
-//	
 //	// Start the current tab's progress indicator
-//	[dbDocument setIsProcessing:YES];
+	[dbDocument setIsProcessing:YES];
 //
-//	// If the password(s) are marked as having been originally sourced from a keychain, check whether they
-//	// have been changed or not; if not, leave the mark in place and remove the password from the field
-//	// for increased security.
-//#ifndef SP_CODA
-//	if (connectionKeychainItemName && !isTestingConnection) {
-//		if ([[keychain getPasswordForName:connectionKeychainItemName account:connectionKeychainItemAccount] isEqualToString:[self password]]) {
-//			[self setPassword:[[NSString string] stringByPaddingToLength:[[self password] length] withString:@"sp" startingAtIndex:0]];
-//			
-//			[[standardPasswordField undoManager] removeAllActionsWithTarget:standardPasswordField];
-//			[[socketPasswordField undoManager] removeAllActionsWithTarget:socketPasswordField];
-//			[[sshPasswordField undoManager] removeAllActionsWithTarget:sshPasswordField];
-//		} 
-//		else {
-//			[connectionKeychainItemName release], connectionKeychainItemName = nil;
-//			[connectionKeychainItemAccount release], connectionKeychainItemAccount = nil;
-//		}
-//	}
-//	
-//	if (connectionSSHKeychainItemName && !isTestingConnection) {
-//		if ([[keychain getPasswordForName:connectionSSHKeychainItemName account:connectionSSHKeychainItemAccount] isEqualToString:[self sshPassword]]) {
-//			[self setSshPassword:[[NSString string] stringByPaddingToLength:[[self sshPassword] length] withString:@"sp" startingAtIndex:0]];
-//			[[sshSSHPasswordField undoManager] removeAllActionsWithTarget:sshSSHPasswordField];
-//		} 
-//		else {
-//			[connectionSSHKeychainItemName release], connectionSSHKeychainItemName = nil;
-//			[connectionSSHKeychainItemAccount release], connectionSSHKeychainItemAccount = nil;
-//		}
-//	}
-//#endif
+	// If the password(s) are marked as having been originally sourced from a keychain, check whether they
+	// have been changed or not; if not, leave the mark in place and remove the password from the field
+	// for increased security.
+#ifndef SP_CODA
+	if (connectionKeychainItemName && !isTestingConnection) {
+		if ([[keychain getPasswordForName:connectionKeychainItemName account:connectionKeychainItemAccount] isEqualToString:[self password]]) {
+			[self setPassword:[[NSString string] stringByPaddingToLength:[[self password] length] withString:@"sp" startingAtIndex:0]];
+			
+			[[standardPasswordField undoManager] removeAllActionsWithTarget:standardPasswordField];
+			[[socketPasswordField undoManager] removeAllActionsWithTarget:socketPasswordField];
+			[[sshPasswordField undoManager] removeAllActionsWithTarget:sshPasswordField];
+		} 
+		else {
+			[connectionKeychainItemName release], connectionKeychainItemName = nil;
+			[connectionKeychainItemAccount release], connectionKeychainItemAccount = nil;
+		}
+	}
+	
+	if (connectionSSHKeychainItemName && !isTestingConnection) {
+		if ([[keychain getPasswordForName:connectionSSHKeychainItemName account:connectionSSHKeychainItemAccount] isEqualToString:[self sshPassword]]) {
+			[self setSshPassword:[[NSString string] stringByPaddingToLength:[[self sshPassword] length] withString:@"sp" startingAtIndex:0]];
+			[[sshSSHPasswordField undoManager] removeAllActionsWithTarget:sshSSHPasswordField];
+		} 
+		else {
+			[connectionSSHKeychainItemName release], connectionSSHKeychainItemName = nil;
+			[connectionSSHKeychainItemAccount release], connectionSSHKeychainItemAccount = nil;
+		}
+	}
+#endif
 //
-//	// Inform the delegate that we are starting the connection process
-//	if (delegate && [delegate respondsToSelector:@selector(connectionControllerInitiatingConnection:)]) {
-//		[delegate connectionControllerInitiatingConnection:self];
-//	}
-//
-//	// Trim whitespace and newlines from the host field before attempting to connect
-//	[self setHost:[[self host] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]];
+	// Inform the delegate that we are starting the connection process
+	if (delegate && [delegate respondsToSelector:@selector(connectionControllerInitiatingConnection:)]) {
+		[delegate connectionControllerInitiatingConnection:self];
+	}
+
+	// Trim whitespace and newlines from the host field before attempting to connect
+	[self setHost:[[self host] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]];
 //
 //	// Initiate the SSH connection process for tunnels
 //	if ([self type] == SPSSHTunnelConnection) {
@@ -1849,7 +1849,7 @@ static NSComparisonResult _compareFavoritesUsingKey(id favorite1, id favorite2, 
 		}
 	
 	if (sshTunnel) [sshTunnel setConnectionStateChangeSelector:nil delegate:nil], [sshTunnel disconnect], [sshTunnel release];
-	}
+}
 
 #pragma mark -
 

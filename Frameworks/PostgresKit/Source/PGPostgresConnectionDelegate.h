@@ -32,6 +32,12 @@
 - (void)connectionEstablished:(PGPostgresConnection *)connection;
 
 /**
+ * Called when failed to established the connection
+ 
+*/
+- (void)connectionFailed:(PGPostgresConnection *)connection;
+
+/**
  * Called whenever the supplied connection has been successfully reset and is ready to use.
  *
  * @param connection The connection instance.

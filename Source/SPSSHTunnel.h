@@ -89,7 +89,8 @@
 - (BOOL)setPasswordKeychainName:(NSString *)theName account:(NSString *)theAccount;
 - (BOOL)setPassword:(NSString *)thePassword;
 - (BOOL)setKeyFilePath:(NSString *)thePath;
-- (SPMySQLConnectionProxyState)state;
+//- (SPMySQLConnectionProxyState)state;
+- (PGPostgresConnectionProxyState)state;
 - (NSString *)lastError;
 - (NSString *)debugMessages;
 - (NSUInteger)localPort;

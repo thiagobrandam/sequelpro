@@ -176,8 +176,9 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 	[self _createConnectionParameters];
 	
 	// Perform the connection
+    
 	_connection = PQconnectStartParams(_connectionParamNames, _connectionParamValues, 0);
-	
+    
 	if (!_connection || PQstatus(_connection) == CONNECTION_BAD) {
 		
 		if (_connectionError) [_connectionError release];
@@ -297,6 +298,7 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
  */
 - (void)_pollConnection:(NSNumber *)isReset
 {
+    NSLog(@"Polling connection");
 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 	
 	BOOL reset = isReset && [isReset boolValue];
@@ -304,6 +306,7 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 	int sock = PQsocket(_connection);
 	
 	if (sock == -1) {
+        NSLog(@"Polling status: could not obtain socket");
 		[pool release];
 		return;
 	}
@@ -322,11 +325,34 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 		if (status == PGRES_POLLING_READING || status == PGRES_POLLING_WRITING) {			
 			if (poll(fdinfo, 1, -1) < 0) break;
 		}
+        
+        NSLog(@"Polling ...");
 	}
 	while (status != PGRES_POLLING_OK && status != PGRES_POLLING_FAILED);
 	
+    // http://www.linuxzone.cz/files/p2/example4.c
+    if (status == PGRES_POLLING_FAILED)
+    {
+        NSLog(@"Poll failed");
+        
+        if (_delegate && [_delegate respondsToSelector:@selector(connectionFailed:)]) {
+            [_delegate performSelectorOnMainThread:@selector(connectionFailed:) withObject:self waitUntilDone:NO];
+        }
+        
+        return;
+    }
+    
+    if (status == PGRES_POLLING_OK)
+    {
+        if ([self isConnected]) {
+            NSLog(@"Poll status successful, connected");
+        } else {
+            NSLog(@"Poll status successful, not connected");
+        }
+    }
+    
 	if (status == PGRES_POLLING_OK && [self isConnected]) {
-		
+        NSLog(@"Poll successful!");
 		// Increase error verbosity
 		PQsetErrorVerbosity(_connection, PQERRORS_VERBOSE);
 		
@@ -399,8 +425,8 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 	BOOL hasPassword = NO;
 	BOOL hasDatabase = NO;
 	
-	if (_connectionParamNames) free(_connectionParamNames);
-	if (_connectionParamValues) free(_connectionParamValues);
+    if (_connectionParamNames) free(_connectionParamNames);
+    if (_connectionParamValues) free(_connectionParamValues);
 	
 	int paramCount = 5;
 	
@@ -409,8 +435,8 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 	if (_password && [_password length]) paramCount++, hasPassword = YES;
 	if (_database && [_database length]) paramCount++, hasDatabase = YES;
 	
-	_connectionParamNames = malloc(paramCount * sizeof(*_connectionParamNames));
-	_connectionParamValues = malloc(paramCount * sizeof(*_connectionParamValues));
+	_connectionParamNames = malloc((paramCount + 1) * sizeof(*_connectionParamNames));
+	_connectionParamValues = malloc((paramCount + 1)* sizeof(*_connectionParamValues));
 	
 	_connectionParamNames[0] = PGPostgresApplicationParam;
 	_connectionParamValues[0] = !_applicationName ? [_applicationName UTF8String] : PGPostgresKitApplicationName;
@@ -457,8 +483,8 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
 		i++;
 	}
 	
-	_connectionParamNames[i] = '\0';
-	_connectionParamValues[i] = '\0';
+	_connectionParamNames[i] = NULL;
+	_connectionParamValues[i] = NULL;
 }
 
 #pragma mark -
