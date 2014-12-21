@@ -38,6 +38,7 @@
 #import "SPThreadAdditions.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @implementation SPTableStructure (SPTableStructureLoading)
 
@@ -69,18 +70,18 @@
 	}
 	
 	// Retrieve the indexes for the table
-	SPMySQLResult *indexResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW INDEX FROM %@", [aTable backtickQuotedString]]];
+	PGPostgresResult *indexResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW INDEX FROM %@", [aTable backtickQuotedString]]];
 	
 	// If an error occurred, reset the interface and abort
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryHasBeenPerformed" object:tableDocumentInstance];
 		[[self onMainThread] setTableDetails:nil];
 		
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"),
 							  nil, nil, [NSApp mainWindow], self, nil, nil,
 							  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while retrieving information.\nMySQL said: %@", @"message of panel when retrieving information failed"),
-							   [mySQLConnection lastErrorMessage]]);
+							   [postgresConnection lastErrorMessage]]);
 		}
 		
 		return;

@@ -39,6 +39,7 @@
 #import "SPServerSupport.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPTableStructure (PrivateAPI)
 
@@ -375,13 +376,13 @@
 			[queryString appendString:@" DEFAULT CURRENT_TIMESTAMP"];
 		}
 		else if ([(NSString *)[originalRow objectForKey:@"default"] length]) {
-			[queryString appendFormat:@" DEFAULT %@", [mySQLConnection escapeAndQuoteString:[originalRow objectForKey:@"default"]]];
+			[queryString appendFormat:@" DEFAULT %@", [postgresConnection escapeAndQuoteString:[originalRow objectForKey:@"default"]]];
 		}
 	}
 	
 	// Any column comments
 	if ([(NSString *)[originalRow objectForKey:@"comment"] length]) {
-		[queryString appendFormat:@" COMMENT %@", [mySQLConnection escapeAndQuoteString:[originalRow objectForKey:@"comment"]]];
+		[queryString appendFormat:@" COMMENT %@", [postgresConnection escapeAndQuoteString:[originalRow objectForKey:@"comment"]]];
 	}
 	
 	// Unparsed details - column formats, storage, reference definitions
@@ -398,11 +399,11 @@
 	}
 	
 	// Run the query; report any errors, or reload the table on success
-	[mySQLConnection queryString:queryString];
+	[postgresConnection execute:queryString];
 	
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		SPBeginAlertSheet(NSLocalizedString(@"Error moving field", @"error moving field message"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-						  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to move the field.\n\nMySQL said: %@", @"error moving field informative message"), [mySQLConnection lastErrorMessage]]);
+						  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to move the field.\n\nMySQL said: %@", @"error moving field informative message"), [postgresConnection lastErrorMessage]]);
 	} 
 	else {
 		[tableDataInstance resetAllData];

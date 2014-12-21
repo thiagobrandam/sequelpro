@@ -326,7 +326,7 @@
 - (void)loadTable:(NSString *)aTable ofType:(SPTableType)aTableType
 {
 	// Ensure a connection is still present
-	if (![mySQLConnection isConnected]) return;
+	if (![postgresConnection isConnected]) return;
 
 	// If the supplied table name was nil, clear the views.
 	if (!aTable) {
@@ -486,12 +486,12 @@
 	relationsLoaded = NO;
 	
 	// Ensure status and details are fetched using UTF8
-	NSString *previousEncoding = [mySQLConnection encoding];
+	NSString *previousEncoding = [postgresConnection encoding];
 	BOOL changeEncoding = ![previousEncoding isEqualToString:@"utf8"];
 	
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
 	// Cache status information on the working thread
@@ -515,7 +515,7 @@
 		}
 	}
 
-	if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+	if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 	// Notify listeners of the table change now that the state is fully set up.
 		[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:SPTableChangedNotification object:self];

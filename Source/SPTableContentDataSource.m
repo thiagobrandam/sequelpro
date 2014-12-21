@@ -135,7 +135,7 @@
 				}
 
 				// Always retrieve the short string representation, truncating the value where necessary
-				return [value shortStringRepresentationUsingEncoding:[mySQLConnection stringEncoding]];
+				return [value shortStringRepresentationUsingEncoding:[postgresConnection stringEncoding]];
 			}
 			
 			if ([value isSPNotLoaded]) {

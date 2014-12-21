@@ -50,6 +50,7 @@
 
 #import <pthread.h>
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPTableContent (SPDeclaredAPI)
 
@@ -247,7 +248,7 @@
 				// Only get the data for the selected column, not all of them
 				NSString *query = [NSString stringWithFormat:@"SELECT %@ FROM %@ WHERE %@", [[[tableColumn headerCell] stringValue] backtickQuotedString], [selectedTable backtickQuotedString], wherePart];
 				
-				SPMySQLResult *tempResult = [mySQLConnection queryString:query];
+				PGPostgresResult *tempResult = [postgresConnection execute:query];
 				
 				if (![tempResult numberOfRows]) {
 					SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
@@ -331,7 +332,7 @@
 				
 				[fieldEditor editWithObject:cellValue
 								  fieldName:[[tableColumn headerCell] stringValue]
-							  usingEncoding:[mySQLConnection stringEncoding]
+							  usingEncoding:[postgresConnection stringEncoding]
 							   isObjectBlob:isBlob
 								 isEditable:isFieldEditable
 								 withWindow:[tableDocumentInstance parentWindow]

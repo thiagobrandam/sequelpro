@@ -32,6 +32,7 @@
 @class SPDatabaseDocument;
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPDatabaseStructure : NSObject <SPMySQLConnectionDelegate> 
 {
@@ -56,7 +57,8 @@
 - (void)destroy:(NSNotification *)notification;
 
 // Information
-- (SPMySQLConnection *)connection;
+//- (SPMySQLConnection *)connection;
+- (PGPostgresConnection *)connection;
 
 // Structure retrieval from the server
 - (void)queryDbStructureWithUserInfo:(NSDictionary*)userInfo;

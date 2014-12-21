@@ -40,7 +40,8 @@
 @interface SPDatabaseStructure (Private_API)
 
 - (void)_updateGlobalVariablesWithStructure:(NSDictionary *)aStructure keys:(NSArray *)theKeys;
-- (void)_cloneConnectionFromConnection:(SPMySQLConnection *)aConnection;
+//- (void)_cloneConnectionFromConnection:(SPMySQLConnection *)aConnection;
+- (void)_cloneConnectionFromConnection:(PGPostgresConnection *)aConnection;
 - (BOOL)_ensureConnection;
 
 @end
@@ -140,9 +141,14 @@
 #pragma mark -
 #pragma mark Information
 
-- (SPMySQLConnection *)connection
+//- (SPMySQLConnection *)connection
+//{
+//	return mySQLConnection;
+//}
+
+- (PGPostgresConnection *)connection
 {
-	return mySQLConnection;
+	return postgresConnection;
 }
 
 #pragma mark -
@@ -338,7 +344,7 @@
 	NSString *currentDatabaseEscaped = [currentDatabase stringByReplacingOccurrencesOfString:@"`" withString:@"``"];
 
 	NSUInteger uniqueCounter = 0; // used to make field data unique
-	SPMySQLResult *theResult;
+	PGPostgresResult *theResult;
 
 	// Loop through the known tables and views, retrieving details for each
 	for (NSDictionary *aTableDict in tablesAndViews) {
@@ -387,7 +393,7 @@
 		pthread_mutex_unlock(&connectionCheckLock);
 
 		// Retrieve the column details
-		theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW FULL COLUMNS FROM `%@` FROM `%@`", [aTableName stringByReplacingOccurrencesOfString:@"`" withString:@"``"], currentDatabaseEscaped]];
+		theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW FULL COLUMNS FROM `%@` FROM `%@`", [aTableName stringByReplacingOccurrencesOfString:@"`" withString:@"``"], currentDatabaseEscaped]];
 		if (!theResult) {
 			continue;
 		}
@@ -437,7 +443,7 @@
 	}
 
 	// If the MySQL version is higher than 5, also retrieve function/procedure details via the information_schema table
-	if ([mySQLConnection serverMajorVersion] >= 5) {
+	if ([postgresConnection serverMajorVersion] >= 5) {
 		BOOL cancelThread = NO;
 
 		if ([[NSThread currentThread] isCancelled]) cancelThread = YES;
@@ -469,7 +475,7 @@
 		}
 
 		// Retrieve the column details (only those we need so we don't fetch the whole function body which might be huge)
-		theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT SPECIFIC_NAME, ROUTINE_TYPE, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, SECURITY_TYPE, DEFINER FROM `information_schema`.`ROUTINES` WHERE `ROUTINE_SCHEMA` = %@", [currentDatabase tickQuotedString]]];
+		theResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT SPECIFIC_NAME, ROUTINE_TYPE, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, SECURITY_TYPE, DEFINER FROM `information_schema`.`ROUTINES` WHERE `ROUTINE_SCHEMA` = %@", [currentDatabase tickQuotedString]]];
 		[theResult setDefaultRowReturnType:SPMySQLResultRowAsArray];
 
 		// Loop through the rows and extract the function details
