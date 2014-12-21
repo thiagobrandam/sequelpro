@@ -201,7 +201,7 @@ static const NSInteger kBlobAsImageFile = 4;
 					[result appendFormat:@"%@\t", NSLocalizedString(@"(not loaded)", @"value shown for hidden blob and text fields")];
 				else if ([cellData isKindOfClass:[NSData class]]) {
 					if(withBlobHandling == kBlobInclude) {
-						NSString *displayString = [[NSString alloc] initWithData:cellData encoding:[mySQLConnection stringEncoding]];
+						NSString *displayString = [[NSString alloc] initWithData:cellData encoding:[postgresConnection stringEncoding]];
 						if (!displayString) displayString = [[NSString alloc] initWithData:cellData encoding:NSASCIIStringEncoding];
 						if (displayString) {
 							[result appendFormat:@"%@\t", displayString];
@@ -340,7 +340,7 @@ static const NSInteger kBlobAsImageFile = 4;
 					[result appendFormat:@"\"%@\",", NSLocalizedString(@"(not loaded)", @"value shown for hidden blob and text fields")];
 				else if ([cellData isKindOfClass:[NSData class]]) {
 					if(withBlobHandling == kBlobInclude) {
-						NSString *displayString = [[NSString alloc] initWithData:cellData encoding:[mySQLConnection stringEncoding]];
+						NSString *displayString = [[NSString alloc] initWithData:cellData encoding:[postgresConnection stringEncoding]];
 						if (!displayString) displayString = [[NSString alloc] initWithData:cellData encoding:NSASCIIStringEncoding];
 						if (displayString) {
 							[result appendFormat:@"\"%@\",", displayString];
@@ -505,7 +505,7 @@ static const NSInteger kBlobAsImageFile = 4;
 
 				// Use the argumentForRow to retrieve the missing information
 				// TODO - this could be preloaded for all selected rows rather than cell-by-cell
-				cellData = [mySQLConnection getFirstFieldFromQuery:
+				cellData = [postgresConnection getFirstFieldFromQuery:
 							[NSString stringWithFormat:@"SELECT %@ FROM %@ WHERE %@",
 								[NSArrayObjectAtIndex(tbHeader, columnMappings[c]) backtickQuotedString],
 								[selectedTable backtickQuotedString],
@@ -532,15 +532,15 @@ static const NSInteger kBlobAsImageFile = 4;
 					case 1:
 					case 2:
 						if ([cellData isKindOfClass:nsDataClass]) {
-							[rowValues addObject:[mySQLConnection escapeAndQuoteData:cellData]];
+							[rowValues addObject:[postgresConnection escapeAndQuoteData:cellData]];
 						} else {
-							[rowValues addObject:[mySQLConnection escapeAndQuoteString:[cellData description]]];
+							[rowValues addObject:[postgresConnection escapeAndQuoteString:[cellData description]]];
 						}
 						break;
 
 					// GEOMETRY
 					case 3:
-						[rowValues addObject:[mySQLConnection escapeAndQuoteData:[cellData data]]];
+						[rowValues addObject:[postgresConnection escapeAndQuoteData:[cellData data]]];
 						break;
 					// Unhandled cases - abort
 					default:
@@ -636,7 +636,7 @@ static const NSInteger kBlobAsImageFile = 4;
 	NSString *nullString = [prefs objectForKey:SPNullValue];
 	Class nsDataClass = [NSData class];
 	Class spmysqlGeometryData = [SPMySQLGeometryData class];
-	NSStringEncoding connectionEncoding = [mySQLConnection stringEncoding];
+	NSStringEncoding connectionEncoding = [postgresConnection stringEncoding];
 	while ( rowIndex != NSNotFound )
 	{
 		for ( c = 0; c < numColumns; c++ ) {
@@ -691,12 +691,13 @@ static const NSInteger kBlobAsImageFile = 4;
 /**
  * Init self with data coming from the table content view. Mainly used for copying data properly.
  */
-- (void) setTableInstance:(id)anInstance withTableData:(SPDataStorage *)theTableStorage withColumns:(NSArray *)columnDefs withTableName:(NSString *)aTableName withConnection:(id)aMySqlConnection
+//- (void) setTableInstance:(id)anInstance withTableData:(SPDataStorage *)theTableStorage withColumns:(NSArray *)columnDefs withTableName:(NSString *)aTableName withConnection:(id)aMySqlConnection
+- (void) setTableInstance:(id)anInstance withTableData:(SPDataStorage *)theTableStorage withColumns:(NSArray *)columnDefs withTableName:(NSString *)aTableName withConnection:(id)aPostgresConnection
 {
-	selectedTable     = aTableName;
-	mySQLConnection   = aMySqlConnection;
-	tableInstance     = anInstance;
-	tableStorage	  = theTableStorage;
+	selectedTable      = aTableName;
+	postgresConnection = aPostgresConnection;
+	tableInstance      = anInstance;
+	tableStorage	   = theTableStorage;
 
 	if (columnDefinitions) [columnDefinitions release], columnDefinitions = nil;
 	columnDefinitions = [[NSArray alloc] initWithArray:columnDefs];
@@ -822,7 +823,7 @@ static const NSInteger kBlobAsImageFile = 4;
 
 			// Otherwise, ensure the cell is represented as a short string
 			if ([contentString isKindOfClass:[NSData class]]) {
-				contentString = [contentString shortStringRepresentationUsingEncoding:[mySQLConnection stringEncoding]];
+				contentString = [contentString shortStringRepresentationUsingEncoding:[postgresConnection stringEncoding]];
 			} else if ([(NSString *)contentString length] > 500) {
 				contentString = [contentString substringToIndex:500];
 			}
@@ -1224,7 +1225,7 @@ static const NSInteger kBlobAsImageFile = 4;
 	}
 
 	if ([cellValue isKindOfClass:[NSData class]]) {
-		cellValue = [[[NSString alloc] initWithData:cellValue encoding:[mySQLConnection stringEncoding]] autorelease];
+		cellValue = [[[NSString alloc] initWithData:cellValue encoding:[postgresConnection stringEncoding]] autorelease];
 	}
 
 	if (![cellValue isNSNull]

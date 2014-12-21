@@ -38,6 +38,7 @@
 @class SPTextView;
 @class SPFieldEditorController;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 @class SPMySQLStreamingResultStore;
 @class SPTableData;
 @class SPDatabaseDocument;
@@ -117,7 +118,8 @@
 	// Temporary to avoid nib conflicts during WIP
 	IBOutlet SPSplitView *contentSplitView;
 #endif
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 
 	BOOL _mainNibLoaded;
 	BOOL isWorking;
@@ -264,7 +266,8 @@
 - (void)endDocumentTaskForTab:(NSNotification *)aNotification;
 
 // Additional methods
-- (void)setConnection:(SPMySQLConnection *)theConnection;
+//- (void)setConnection:(SPMySQLConnection *)theConnection;
+- (void)setConnection:(PGPostgresConnection *)theConnection;
 - (void)clickLinkArrow:(SPTextAndLinkCell *)theArrowCell;
 - (void)clickLinkArrowTask:(SPTextAndLinkCell *)theArrowCell;
 - (IBAction)setCompareTypes:(id)sender;

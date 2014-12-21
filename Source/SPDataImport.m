@@ -1622,13 +1622,14 @@
 /**
  * Sets the connection (received from SPDatabaseDocument) and makes things that have to be done only once.
  */
-- (void)setConnection:(SPMySQLConnection *)theConnection
+//- (void)setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
 	NSButtonCell *switchButton = [[NSButtonCell alloc] init];
 	
 	prefs = [[NSUserDefaults standardUserDefaults] retain];
 	
-	mySQLConnection = theConnection;
+	postgresConnection = theConnection;
 	
 	// Set up the interface
 	[switchButton setButtonType:NSSwitchButton];

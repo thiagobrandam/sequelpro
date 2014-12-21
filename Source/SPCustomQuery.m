@@ -2819,10 +2819,17 @@
 /**
  * Set the MySQL version as X.Y for Help window title and online search
  */
-- (void)setMySQLversion:(NSString *)theVersion
+//- (void)setMySQLversion:(NSString *)theVersion
+//{
+//	mySQLversion = [[theVersion substringToIndex:3] retain];
+//	[textView setConnection:mySQLConnection withVersion:[[[mySQLversion componentsSeparatedByString:@"."] objectAtIndex:0] integerValue]];
+//}
+
+- (void)setPostgreSQLVersion:(NSString *)theVersion
 {
-	mySQLversion = [[theVersion substringToIndex:3] retain];
-	[textView setConnection:mySQLConnection withVersion:[[[mySQLversion componentsSeparatedByString:@"."] objectAtIndex:0] integerValue]];
+	postgresVersion = theVersion;
+	[textView setConnection:postgresConnection withVersion:[theVersion integerValue]];
+	
 }
 
 #ifndef SP_CODA

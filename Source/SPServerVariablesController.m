@@ -33,6 +33,7 @@
 #import "SPAppController.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPServerVariablesController ()
 

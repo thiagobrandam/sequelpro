@@ -76,10 +76,11 @@
  *
  * @param theConnection The used connection for the SPDatabaseDocument
  */
-- (void) setConnection:(SPMySQLConnection *)theConnection
+//- (void) setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
-	mySQLConnection = theConnection;
-	[mySQLConnection retain];
+	postgresConnection = theConnection;
+	[postgresConnection retain];
 }
 
 /**

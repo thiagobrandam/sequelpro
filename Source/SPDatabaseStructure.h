@@ -36,7 +36,8 @@
 @interface SPDatabaseStructure : NSObject <SPMySQLConnectionDelegate> 
 {
 	SPDatabaseDocument *delegate;
-	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
+//	SPMySQLConnection *mySQLConnection;
 
 	NSMutableDictionary *structure;
 	NSMutableArray *allKeysofDbStructure;
@@ -50,7 +51,8 @@
 
 // Setup and teardown
 - (id)initWithDelegate:(SPDatabaseDocument *)theDelegate;
-- (void)setConnectionToClone:(SPMySQLConnection *)aConnection;
+//- (void)setConnectionToClone:(SPMySQLConnection *)aConnection;
+- (void)setConnectionToClone:(PGPostgresConnection *)aConnection;
 - (void)destroy:(NSNotification *)notification;
 
 // Information

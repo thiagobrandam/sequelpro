@@ -55,7 +55,7 @@
 		177AC67F15C53FA400A3658D /* PGPostgresKitPrivateAPI.h in Headers */ = {isa = PBXBuildFile; fileRef = 177AC67D15C53FA400A3658D /* PGPostgresKitPrivateAPI.h */; };
 		177AC6B015C5460C00A3658D /* PGPostgresConnectionQueryPreparation.h in Headers */ = {isa = PBXBuildFile; fileRef = 177AC6AE15C5460C00A3658D /* PGPostgresConnectionQueryPreparation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		177AC6B115C5460C00A3658D /* PGPostgresConnectionQueryPreparation.m in Sources */ = {isa = PBXBuildFile; fileRef = 177AC6AF15C5460C00A3658D /* PGPostgresConnectionQueryPreparation.m */; };
-		177C9BAB15CD37E000128642 /* PGPostgresConnectionEncoding.h in Headers */ = {isa = PBXBuildFile; fileRef = 177C9BA915CD37E000128642 /* PGPostgresConnectionEncoding.h */; };
+		177C9BAB15CD37E000128642 /* PGPostgresConnectionEncoding.h in Headers */ = {isa = PBXBuildFile; fileRef = 177C9BA915CD37E000128642 /* PGPostgresConnectionEncoding.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		177C9BAC15CD37E000128642 /* PGPostgresConnectionEncoding.m in Sources */ = {isa = PBXBuildFile; fileRef = 177C9BAA15CD37E000128642 /* PGPostgresConnectionEncoding.m */; };
 		17E595F214F3058F0054EE08 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17E595F114F3058F0054EE08 /* Foundation.framework */; };
 		17F7963116150C0100E21D82 /* PGPostgresTypeBinaryHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 17F7962F16150C0100E21D82 /* PGPostgresTypeBinaryHandler.h */; };
@@ -430,6 +430,7 @@
 				AFAF96A81A32A9610018F735 /* PGPostgresConnectionProxy.h in Headers */,
 				173D4F4515BAD22B0007F267 /* PGPostgresTypeHandlerProtocol.h in Headers */,
 				173D4F5715BAD3030007F267 /* PGPostgresTypes.h in Headers */,
+				177C9BAB15CD37E000128642 /* PGPostgresConnectionEncoding.h in Headers */,
 				173D508C15BBD98D0007F267 /* PGConstants.h in Headers */,
 				173D513515BBE50D0007F267 /* PGPostgresConnectionDelegate.h in Headers */,
 				170465CE15C2960F00DC5BE5 /* PGPostgresTypeHandler.h in Headers */,
@@ -437,7 +438,6 @@
 				177AC66915C53CB000A3658D /* PGPostgresConnectionQueryExecution.h in Headers */,
 				177AC67F15C53FA400A3658D /* PGPostgresKitPrivateAPI.h in Headers */,
 				177AC6B015C5460C00A3658D /* PGPostgresConnectionQueryPreparation.h in Headers */,
-				177C9BAB15CD37E000128642 /* PGPostgresConnectionEncoding.h in Headers */,
 				1731F02B15EE09E000D973EB /* PGPostgresConnectionParameters.h in Headers */,
 				1731F10815F1A52B00D973EB /* PGPostgresTypeDateTimeHandler.h in Headers */,
 				1731F52E15F48BA500D973EB /* PGPostgresError.h in Headers */,

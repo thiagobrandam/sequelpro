@@ -795,9 +795,10 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 /**
  * Sets the connection (received from SPDatabaseDocument) and makes things that have to be done only once
  */
-- (void)setConnection:(SPMySQLConnection *)theConnection
+//- (void)setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
-	mySQLConnection = theConnection;
+	postgresConnection = theConnection;
 	
 	[self updateTables:self];
 }

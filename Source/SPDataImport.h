@@ -30,6 +30,7 @@
 //  More info at <https://github.com/sequelpro/sequelpro>
 
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 
 typedef enum {
 	SPFieldMapperInProgress = 1,
@@ -83,7 +84,8 @@ typedef enum {
 	IBOutlet id singleProgressTitle;
 	IBOutlet id singleProgressText;
 
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 
 	NSMutableArray *nibObjectsToRelease;
 

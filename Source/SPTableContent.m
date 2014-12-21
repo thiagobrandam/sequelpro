@@ -344,7 +344,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	[self performSelectorOnMainThread:@selector(setTableDetails:) withObject:tableDetails waitUntilDone:YES];
 
 	// Init copyTable with necessary information for copying selected rows as SQL INSERT
-	[tableContentView setTableInstance:self withTableData:tableValues withColumns:dataColumns withTableName:selectedTable withConnection:mySQLConnection];
+	[tableContentView setTableInstance:self withTableData:tableValues withColumns:dataColumns withTableName:selectedTable withConnection:postgresConnection];
 
 	// Trigger a data refresh
 	[self loadTableValues];
@@ -2598,9 +2598,10 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 /**
  * Sets the connection (received from SPDatabaseDocument) and makes things that have to be done only once
  */
-- (void)setConnection:(SPMySQLConnection *)theConnection
+//- (void)setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
-	mySQLConnection = theConnection;
+	postgresConnection = theConnection;
 
 	[tableContentView setVerticalMotionCanBeginDrag:NO];
 }

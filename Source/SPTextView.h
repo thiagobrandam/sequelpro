@@ -35,6 +35,7 @@
 @class SPTablesList;
 @class SPCustomQuery;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 @class SPCopyTable;
 @class NoodleLineNumberView;
 
@@ -68,9 +69,11 @@
 	NSUserDefaults *prefs;
 #endif
 
-	SPMySQLConnection *mySQLConnection;
-	NSInteger mySQLmajorVersion;
-
+//	SPMySQLConnection *mySQLConnection;
+//	NSInteger mySQLmajorVersion;
+	PGPostgresConnection *postgresConnection;
+	NSInteger postgresMajorVersion;
+	
 	NSInteger snippetControlArray[20][3];
 	NSInteger snippetMirroredControlArray[20][3];
 	NSInteger snippetControlCounter;

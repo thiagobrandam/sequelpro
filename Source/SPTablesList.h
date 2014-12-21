@@ -32,6 +32,7 @@
 @class SPHistoryController;
 @class SPTableView;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 @class SPDatabaseDocument; 
 @class SPDatabaseData;
 @class SPTableStructure;
@@ -103,7 +104,8 @@
 	IBOutlet NSMenuItem *separatorTableMenuItem3;
 #endif
 	
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 	
 #ifndef SP_CODA /* ivars */
 	// Table list context menu items
@@ -158,7 +160,8 @@
 #endif
 
 // Additional methods
-- (void)setConnection:(SPMySQLConnection *)theConnection;
+//- (void)setConnection:(SPMySQLConnection *)theConnection;
+- (void)setConnection:(PGPostgresConnection *)theConnection;
 - (void)setSelectionState:(NSDictionary *)selectionDetails;
 
 #ifndef SP_CODA /* method decls */

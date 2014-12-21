@@ -31,6 +31,7 @@
 @class SPDatabaseDocument;
 @class SPTablesList;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 
 @interface SPTableData : NSObject 
 {
@@ -47,7 +48,8 @@
 	NSString *tableEncoding;
 	NSString *tableCreateSyntax;
 	
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 
 	pthread_mutex_t dataProcessingLock;
 
@@ -56,7 +58,8 @@
 
 @property (readonly, assign) BOOL tableHasAutoIncrementField;
 
-- (void) setConnection:(SPMySQLConnection *)theConnection;
+//- (void) setConnection:(SPMySQLConnection *)theConnection;
+- (void)setConnection:(PGPostgresConnection *)theConnection;
 - (NSString *) tableEncoding;
 - (NSString *) tableCreateSyntax;
 - (NSArray *) columns;

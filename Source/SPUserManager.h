@@ -30,6 +30,7 @@
 
 @class SPServerSupport;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 @class SPSplitView;
 @class SPDatabaseDocument;
 
@@ -40,7 +41,8 @@
     NSManagedObjectContext *managedObjectContext;
 	NSDictionary *privColumnToGrantMap;
 	
-	SPMySQLConnection *connection;
+//	SPMySQLConnection *connection;
+	PGPostgresConnection *connection;
 	SPDatabaseDocument *databaseDocument;
 	SPServerSupport *serverSupport;
 
@@ -80,7 +82,8 @@
 	NSMutableString *errorsString;
 }
 
-@property (nonatomic, retain) SPMySQLConnection *connection;
+//@property (nonatomic, retain) SPMySQLConnection *connection;
+@property (nonatomic, retain) PGPostgresConnection *connection;
 @property (nonatomic, assign) SPDatabaseDocument *databaseDocument;
 @property (nonatomic, retain) SPServerSupport *serverSupport;
 @property (nonatomic, retain) NSPersistentStoreCoordinator *persistentStoreCoordinator;

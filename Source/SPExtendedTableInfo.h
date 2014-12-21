@@ -33,6 +33,7 @@
 @class SPDatabaseData;
 @class SPTablesList;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 
 @interface SPExtendedTableInfo : NSObject
 {
@@ -64,10 +65,12 @@
 	
 	NSString *selectedTable;
 	
-	SPMySQLConnection *connection;
+//	SPMySQLConnection *connection;
+	PGPostgresConnection *connection;
 }
 
-@property (readwrite, retain) SPMySQLConnection *connection;
+//@property (readwrite, retain) SPMySQLConnection *connection;
+@property (readwrite, retain) PGPostgresConnection *connection;
 
 // IBAction methods
 - (IBAction)reloadTable:(id)sender;

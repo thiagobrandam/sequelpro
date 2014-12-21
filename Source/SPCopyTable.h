@@ -53,7 +53,7 @@ extern NSInteger SPEditCopyAsSQL;
 @interface SPCopyTable : SPTableView
 {
 	SPTableContent* tableInstance;                 // the table content view instance
-	id mySQLConnection;               // current MySQL connection
+	id postgresConnection;               // current MySQL connection
 	NSArray* columnDefinitions;       // array of NSDictionary containing info about columns
 	NSString* selectedTable;          // the name of the current selected table
 	SPDataStorage* tableStorage;      // the underlying storage array holding the table data

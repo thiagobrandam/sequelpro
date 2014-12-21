@@ -73,7 +73,7 @@
 		delegate = theDelegate;
 
 		// Start with no root connection
-		mySQLConnection = nil;
+		postgresConnection = nil;
 
 		// Set up empty structure and keys storage
 		structureRetrievalThreads = [[NSMutableArray alloc] init];
@@ -99,7 +99,8 @@
  * will set up its own connection to allow background querying.  The supplied
  * connection will be used to look up details for the clone process.
  */
-- (void)setConnectionToClone:(SPMySQLConnection *)aConnection
+//- (void)setConnectionToClone:(SPMySQLConnection *)aConnection
+- (void)setConnectionToClone:(PGPostgresConnection *)aConnection
 {
 	// Perform the task in a background thread to avoid blocking the UI
 	[NSThread detachNewThreadWithName:@"SPDatabaseStructure clone connection task" 
@@ -573,7 +574,7 @@
 	pthread_mutex_destroy(&dataLock);
 	pthread_mutex_destroy(&connectionCheckLock);
 	
-	if (mySQLConnection) [mySQLConnection release], mySQLConnection = nil;
+	if (postgresConnection) [postgresConnection release], postgresConnection = nil;
 	if (structure) [structure release], structure = nil;
 	if (allKeysofDbStructure) [allKeysofDbStructure release], allKeysofDbStructure = nil;
 	
@@ -609,14 +610,15 @@
 /**
  * Set up a new connection in a background thread
  */
-- (void)_cloneConnectionFromConnection:(SPMySQLConnection *)aConnection
+//- (void)_cloneConnectionFromConnection:(SPMySQLConnection *)aConnection
+- (void)_cloneConnectionFromConnection:(PGPostgresConnection *)aConnection
 {
 	NSAutoreleasePool *connectionPool = [[NSAutoreleasePool alloc] init];
 
 	pthread_mutex_lock(&connectionCheckLock);
 
 	// If a connection is already set, ensure it's idle before releasing it
-	if (mySQLConnection) {
+	if (postgresConnection) {
 		pthread_mutex_lock(&threadManagementLock);
 		if ([structureRetrievalThreads count]) {
 			for (NSThread *eachThread in structureRetrievalThreads) {
@@ -630,15 +632,15 @@
 		}
 		pthread_mutex_unlock(&threadManagementLock);
 
-		[mySQLConnection release];
-		mySQLConnection = nil;
+		[postgresConnection release];
+		postgresConnection = nil;
 	}
 
 	// Create a copy of the supplied connection
-	mySQLConnection = [aConnection copy];
+	postgresConnection = [aConnection copy];
 
 	// Set the delegate to this instance
-	[mySQLConnection setDelegate:self];
+	[postgresConnection setDelegate:self];
 
 	// Trigger the connection
 	[self _ensureConnection];
@@ -650,23 +652,23 @@
 
 - (BOOL)_ensureConnection
 {
-	if (!mySQLConnection || !delegate) return NO;
+	if (!postgresConnection || !delegate) return NO;
 
 	// Check the connection state
-	if ([mySQLConnection isConnected] && [mySQLConnection checkConnection]) return YES;
+	if ([postgresConnection isConnected] && [postgresConnection checkConnection]) return YES;
 
 	// The connection isn't connected.  Check the parent connection state, and if that
 	// also isn't connected, return.
 	if (![[delegate getConnection] isConnected]) return NO;
 
 	// Copy the local port from the parent connection, in case a proxy has changed
-	[mySQLConnection setPort:[[delegate getConnection] port]];
+	[postgresConnection setPort:[[delegate getConnection] port]];
 
 	// Attempt a connection
-	if (![mySQLConnection connect]) return NO;
+	if (![postgresConnection connect]) return NO;
 
 	// Ensure the encoding is set to UTF8
-	[mySQLConnection setEncoding:@"utf8"];
+	[postgresConnection setEncoding:@"utf8"];
 
 	// Return success
 	return YES;

@@ -540,4 +540,49 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
     return NO;
 }
 
+/**
+ * Checks whether the connection to the server is still active.  This verifies
+ * the connection using a ping, and if the connection is found to be down attempts
+ * to quickly restore it, including the previous state.
+ */
+// TODO: do proper check connection
+- (BOOL)checkConnection
+{
+    return YES;
+//    // If the connection is not seen as active, don't proceed
+//    if (state != SPMySQLConnected) return NO;
+//    
+//    // Similarly, if the connection is currently locked, that indicates it's in use.  This
+//    // could be because queries are actively being run, or that a ping is running.
+//    if ([connectionLock condition] == SPMySQLConnectionBusy) {
+//        
+//        // If a ping thread is not active queries are being performed - return success.
+//        if (!keepAlivePingThreadActive) return YES;
+//        
+//        // If a ping thread is active, wait for it to complete before checking the connection
+//        while (keepAlivePingThreadActive) {
+//            usleep(10000);
+//        }
+//    }
+//    
+//    // Confirm whether the connection is still responding by using a ping
+//    BOOL connectionVerified = [self _pingConnectionUsingLoopDelay:400];
+//    
+//    // If the connection didn't respond, trigger a reconnect.  This will automatically
+//    // attempt to reconnect once, and if that fails will ask the user how to proceed - whether
+//    // to keep reconnecting, or whether to disconnect.
+//    if (!connectionVerified) {
+//        connectionVerified = [self _reconnectAllowingRetries:YES];
+//    }
+//    
+//    // Update the connection tracking use variable if the connection was confirmed,
+//    // as at least a mysql_ping will have been used.
+//    if (connectionVerified) {
+//        lastConnectionUsedTime = mach_absolute_time();
+//    }
+//    
+//    return connectionVerified;
+}
+
+
 @end

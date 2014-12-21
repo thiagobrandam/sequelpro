@@ -239,10 +239,11 @@ static inline NSPoint SPPointOnLine(NSPoint a, NSPoint b, CGFloat t) { return NS
 #endif
 }
 
-- (void) setConnection:(SPMySQLConnection *)theConnection withVersion:(NSInteger)majorVersion
+//- (void) setConnection:(SPMySQLConnection *)theConnection withVersion:(NSInteger)majorVersion
+- (void)setConnection:(PGPostgresConnection *)theConnection withVersion:(NSInteger)majorVersion
 {
-	mySQLConnection = theConnection;
-	mySQLmajorVersion = majorVersion;
+	postgresConnection = theConnection;
+	postgresMajorVersion = majorVersion;
 }
 
 /**

@@ -496,9 +496,9 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	[chooseDatabaseButton setEnabled:!_isWorkingLevel];
 
 	// Set the connection on the database structure builder
-	[databaseStructureRetrieval setConnectionToClone:mySQLConnection];
+	[databaseStructureRetrieval setConnectionToClone:postgresConnection];
 
-	[databaseDataInstance setConnection:mySQLConnection];
+	[databaseDataInstance setConnection:postgresConnection];
 	
 	// Pass the support class to the data instance
 	[databaseDataInstance setServerSupport:serverSupport];
@@ -511,36 +511,36 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 	// Set the connection on the tables list instance - this updates the table list while the connection
 	// is still UTF8
-	[tablesListInstance setConnection:mySQLConnection];
+	[tablesListInstance setConnection:postgresConnection];
 
-#ifndef SP_CODA /* set connection encoding from prefs */
-	// Set the connection encoding if necessary
-	NSNumber *encodingType = [prefs objectForKey:SPDefaultEncoding];
-	
-	if ([encodingType intValue] != SPEncodingAutodetect) {
-		[self setConnectionEncoding:[self mysqlEncodingFromEncodingTag:encodingType] reloadingViews:NO];
-	} else {
-#endif
-		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:[mySQLConnection encoding]]];
-#ifndef SP_CODA
-	}
-#endif
+//#ifndef SP_CODA /* set connection encoding from prefs */
+//	// Set the connection encoding if necessary
+//	NSNumber *encodingType = [prefs objectForKey:SPDefaultEncoding];
+//	
+//	if ([encodingType intValue] != SPEncodingAutodetect) {
+//		[self setConnectionEncoding:[self mysqlEncodingFromEncodingTag:encodingType] reloadingViews:NO];
+//	} else {
+//#endif
+//		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:[mySQLConnection encoding]]];
+//#ifndef SP_CODA
+//	}
+//#endif
 
 	// For each of the main controllers, assign the current connection
-	[tableSourceInstance setConnection:mySQLConnection];
-	[tableContentInstance setConnection:mySQLConnection];
-	[tableRelationsInstance setConnection:mySQLConnection];
-	[tableTriggersInstance setConnection:mySQLConnection];
-	[customQueryInstance setConnection:mySQLConnection];
-	[tableDumpInstance setConnection:mySQLConnection];
+	[tableSourceInstance setConnection:postgresConnection];
+	[tableContentInstance setConnection:postgresConnection];
+	[tableRelationsInstance setConnection:postgresConnection];
+	[tableTriggersInstance setConnection:postgresConnection];
+	[customQueryInstance setConnection:postgresConnection];
+	[tableDumpInstance setConnection:postgresConnection];
 #ifndef SP_CODA
-	[exportControllerInstance setConnection:mySQLConnection];
+	[exportControllerInstance setConnection:postgresConnection];
 #endif
-	[tableDataInstance setConnection:mySQLConnection];
-	[extendedTableInfoInstance setConnection:mySQLConnection];
+	[tableDataInstance setConnection:postgresConnection];
+	[extendedTableInfoInstance setConnection:postgresConnection];
 	
-	// Set the custom query editor's MySQL version
-	[customQueryInstance setMySQLversion:mySQLVersion];
+	// Set the custom query editor's PostgreSQL version
+	[customQueryInstance setPostgreSQLVersion:postgreSQLVersion];
 
 #ifndef SP_CODA
 	[self updateWindowTitle:self];
@@ -638,9 +638,10 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
  *
  * @return The document's connection
  */
-- (SPMySQLConnection *) getConnection 
+//- (SPMySQLConnection *) getConnection
+- (PGPostgresConnection *)getConnection
 {
-	return mySQLConnection;
+	return postgresConnection;
 }
 
 /**
@@ -675,7 +676,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	if (allDatabases) [allDatabases release];
 	if (allSystemDatabases) [allSystemDatabases release];
 	
-	NSArray *theDatabaseList = [mySQLConnection databases];
+	NSArray *theDatabaseList = [postgresConnection databases];
 
 	allDatabases = [[NSMutableArray alloc] initWithCapacity:[theDatabaseList count]];
 	allSystemDatabases = [[NSMutableArray alloc] initWithCapacity:2];
@@ -928,7 +929,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	if (!serverVariablesController) {
 		serverVariablesController = [[SPServerVariablesController alloc] init];
 		
-		[serverVariablesController setConnection:mySQLConnection];
+		[serverVariablesController setConnection:postgresConnection];
 		
 		// Register to obeserve table view vertical grid line pref changes
 		[prefs addObserver:serverVariablesController forKeyPath:SPDisplayTableViewVerticalGridlines options:NSKeyValueObservingOptionNew context:NULL];
@@ -945,7 +946,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	if (!processListController) {
 		processListController = [[SPProcessListController alloc] init];
 		
-		[processListController setConnection:mySQLConnection];
+		[processListController setConnection:postgresConnection];
 		
 		// Register to obeserve table view vertical grid line pref changes
 		[prefs addObserver:processListController forKeyPath:SPDisplayTableViewVerticalGridlines options:NSKeyValueObservingOptionNew context:NULL];
@@ -1092,9 +1093,9 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	// Notify listeners that a query has started
 	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryWillBePerformed" object:self];
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:@"SELECT DATABASE()"];
+	PGPostgresResult *theResult = [postgresConnection execute:@"SELECT DATABASE()"];
 	[theResult setDefaultRowReturnType:SPMySQLResultRowAsArray];
-	if (![mySQLConnection queryErrored]) {
+	if (![postgresConnection queryErrored]) {
 
 		for (NSArray *eachRow in theResult)
 		{
@@ -1120,7 +1121,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	}
 
 	//query finished
-	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryHasBeenPerformed" object:self];
+	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SPostgreSQLQueryHasBeenPerformed" object:self];
 }
 
 #ifndef SP_CODA /* navigatorSchemaPathExistsForDatabase: */
@@ -1511,10 +1512,10 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	// See whether there is an active database structure task and whether it can be used
 	// to cancel the query, for speed (no connection overhead!)
 	if (databaseStructureRetrieval && [databaseStructureRetrieval connection]) {
-		[mySQLConnection setLastQueryWasCancelled:YES];
-		[[databaseStructureRetrieval connection] killQueryOnThreadID:[mySQLConnection mysqlConnectionThreadId]];
+		[postgresConnection setLastQueryWasCancelled:YES];
+		[[databaseStructureRetrieval connection] killQueryOnThreadID:[postgresConnection mysqlConnectionThreadId]];
 	} else {
-	[mySQLConnection cancelCurrentQuery];
+	[postgresConnection cancelCurrentQuery];
 	}
 
 	if (taskCancellationCallbackObject && taskCancellationCallbackSelector) {
@@ -1578,32 +1579,34 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 /**
  * Set the encoding for the database connection
  */
-- (void)setConnectionEncoding:(NSString *)mysqlEncoding reloadingViews:(BOOL)reloadViews
+//- (void)setConnectionEncoding:(NSString *)mysqlEncoding reloadingViews:(BOOL)reloadViews
+- (void)setConnectionEncoding:(NSString *)postgresEnconding reloadingViews:(BOOL)reloadViews
 {
 	BOOL useLatin1Transport = NO;
 
 	// Special-case UTF-8 over latin 1 to allow viewing/editing of mangled data.
-	if ([mysqlEncoding isEqualToString:@"utf8-"]) {
+	if ([postgresEnconding isEqualToString:@"utf8-"]) {
 		useLatin1Transport = YES;
-		mysqlEncoding = @"utf8";
+		postgresEnconding = @"utf8";
 	}
 
 	// Set the connection encoding
-	if (![mySQLConnection setEncoding:mysqlEncoding]) {
-		NSLog(@"Error: could not set encoding to %@ nor fall back to database encoding on MySQL %@", mysqlEncoding, [self mySQLVersion]);
+	if (![postgresConnection setEncoding:postgresEnconding]) {
+		NSLog(@"Error: could not set encoding to %@ nor fall back to database encoding on MySQL %@", postgresEnconding, [self postgreSQLVersion]);
 		return;
 	}
-	[mySQLConnection setEncodingUsesLatin1Transport:useLatin1Transport];
+	[postgresConnection setEncodingUsesLatin1Transport:useLatin1Transport];
 
 	// Update the selected menu item
-	if (useLatin1Transport) {
-		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:[NSString stringWithFormat:@"%@-", mysqlEncoding]]];
-	} else {
-		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:mysqlEncoding]];
-	}
+	// TODO: do proper view updating
+//	if (useLatin1Transport) {
+//		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:[NSString stringWithFormat:@"%@-", mysqlEncoding]]];
+//	} else {
+//		[[self onMainThread] updateEncodingMenuWithSelectedEncoding:[self encodingTagFromMySQLEncoding:mysqlEncoding]];
+//	}
 
 	// Update the stored connection encoding to prevent switches
-	[mySQLConnection storeEncodingForRestoration];
+	[postgresConnection storeEncodingForRestoration];
 
 	// Reload views as appropriate
 	if (reloadViews) {
@@ -1803,13 +1806,13 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 			return;
 		}
 
-		SPMySQLResult *theResult = [mySQLConnection queryString:query];
+		PGPostgresResult *theResult = [postgresConnection execute:query];
 		[theResult setReturnDataAsStrings:YES];
 
 		// Check for errors, only displaying if the connection hasn't been terminated
-		if ([mySQLConnection queryErrored]) {
-			if ([mySQLConnection isConnected]) {
-				NSRunAlertPanel(@"Error", @"%@", @"OK", nil, nil, [NSString stringWithFormat:NSLocalizedString(@"An error occured while creating table syntax.\n\n: %@", @"Error shown when unable to show create table syntax"), [mySQLConnection lastErrorMessage]]);
+		if ([postgresConnection queryErrored]) {
+			if ([postgresConnection isConnected]) {
+				NSRunAlertPanel(@"Error", @"%@", @"OK", nil, nil, [NSString stringWithFormat:NSLocalizedString(@"An error occured while creating table syntax.\n\n: %@", @"Error shown when unable to show create table syntax"), [postgresConnection lastErrorMessage]]);
 			}
 
 			return;
@@ -1902,21 +1905,21 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"CHECK TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"CHECK TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *mText = ([selectedItems count]>1) ? NSLocalizedString(@"Unable to check selected items", @"unable to check selected items message") : NSLocalizedString(@"Unable to check table", @"unable to check table message");
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:mText 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while trying to check the %@.\n\nMySQL said:%@",@"an error occurred while trying to check the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while trying to check the %@.\n\nPostgreSQL said:%@",@"an error occurred while trying to check the %@.\n\nPostgreSQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -1979,21 +1982,21 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"ANALYZE TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"ANALYZE TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *mText = ([selectedItems count]>1) ? NSLocalizedString(@"Unable to analyze selected items", @"unable to analyze selected items message") : NSLocalizedString(@"Unable to analyze table", @"unable to analyze table message");
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:mText 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while analyzing the %@.\n\nMySQL said:%@",@"an error occurred while analyzing the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while analyzing the %@.\n\nPostgreSQL said:%@",@"an error occurred while analyzing the %@.\n\nPostgreSQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -2018,7 +2021,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 		message = ([[lastresult objectForKey:@"Msg_type"] isEqualToString:@"status"]) ? NSLocalizedString(@"Successfully analyzed table.",@"analyze table successfully passed message") : NSLocalizedString(@"Analyze table failed.", @"analyze table failed message");
 
-		message = [NSString stringWithFormat:NSLocalizedString(@"%@\n\nMySQL said: %@", @"Error display text, showing original MySQL error"), message, [lastresult objectForKey:@"Msg_text"]];
+		message = [NSString stringWithFormat:NSLocalizedString(@"%@\n\nPostgreSQL said: %@", @"Error display text, showing original MySQL error"), message, [lastresult objectForKey:@"Msg_text"]];
 	} else if(statusOK) {
 		message = NSLocalizedString(@"Successfully analyzed all selected items.",@"successfully analyzed all selected items message");
 	}
@@ -2034,7 +2037,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 						didEndSelector:NULL 
 						   contextInfo:NULL];
 	} else {
-		message = NSLocalizedString(@"MySQL said:",@"mysql said message");
+		message = NSLocalizedString(@"PostgreSQL said:",@"postgresql said message");
 		if (statusValues) [statusValues release], statusValues = nil;
 		statusValues = [resultStatuses retain];
 		NSAlert *alert = [[NSAlert new] autorelease];
@@ -2056,21 +2059,21 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"OPTIMIZE TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"OPTIMIZE TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *mText = ([selectedItems count]>1) ? NSLocalizedString(@"Unable to optimze selected items", @"unable to optimze selected items message") : NSLocalizedString(@"Unable to optimze table", @"unable to optimze table message");
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:mText 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while optimzing the %@.\n\nMySQL said:%@",@"an error occurred while trying to optimze the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while optimzing the %@.\n\nMySQL said:%@",@"an error occurred while trying to optimze the %@.\n\nPostgreSQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -2095,7 +2098,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 		message = ([[lastresult objectForKey:@"Msg_type"] isEqualToString:@"status"]) ? NSLocalizedString(@"Successfully optimized table.",@"optimize table successfully passed message") : NSLocalizedString(@"Optimize table failed.", @"optimize table failed message");
 
-		message = [NSString stringWithFormat:NSLocalizedString(@"%@\n\nMySQL said: %@", @"Error display text, showing original MySQL error"), message, [lastresult objectForKey:@"Msg_text"]];
+		message = [NSString stringWithFormat:NSLocalizedString(@"%@\n\nPostgreSQL said: %@", @"Error display text, showing original PostgreSQL error"), message, [lastresult objectForKey:@"Msg_text"]];
 	} else if(statusOK) {
 		message = NSLocalizedString(@"Successfully optimized all selected items.",@"successfully optimized all selected items message");
 	}
@@ -2111,7 +2114,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 						didEndSelector:NULL 
 						   contextInfo:NULL];
 	} else {
-		message = NSLocalizedString(@"MySQL said:",@"mysql said message");
+		message = NSLocalizedString(@"PostgreSQL said:",@"postgresql said message");
 		if (statusValues) [statusValues release], statusValues = nil;
 		statusValues = [resultStatuses retain];
 		NSAlert *alert = [[NSAlert new] autorelease];
@@ -2132,21 +2135,21 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"REPAIR TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"REPAIR TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *mText = ([selectedItems count]>1) ? NSLocalizedString(@"Unable to repair selected items", @"unable to repair selected items message") : NSLocalizedString(@"Unable to repair table", @"unable to repair table message");
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:mText 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while repairing the %@.\n\nMySQL said:%@",@"an error occurred while trying to repair the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while repairing the %@.\n\nMySQL said:%@",@"an error occurred while trying to repair the %@.\n\nMySQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -2208,21 +2211,21 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"FLUSH TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"FLUSH TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *mText = ([selectedItems count]>1) ? NSLocalizedString(@"Unable to flush selected items", @"unable to flush selected items message") : NSLocalizedString(@"Unable to flush table", @"unable to flush table message");
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:mText 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while flushing the %@.\n\nMySQL said:%@",@"an error occurred while trying to flush the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while flushing the %@.\n\nMySQL said:%@",@"an error occurred while trying to flush the %@.\n\nMySQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -2284,19 +2287,19 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 	if([selectedItems count] == 0) return;
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"CHECKSUM TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
+	PGPostgresResult *theResult = [postgresConnection queryString:[NSString stringWithFormat:@"CHECKSUM TABLE %@", [selectedItems componentsJoinedAndBacktickQuoted]]];
 
 	NSString *what = ([selectedItems count]>1) ? NSLocalizedString(@"selected items", @"selected items") : [NSString stringWithFormat:@"%@ '%@'", NSLocalizedString(@"table", @"table"), [self table]];
 
 	// Check for errors, only displaying if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:NSLocalizedString(@"Unable to perform the checksum", @"unable to perform the checksum")
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while performing the checksum on %@.\n\nMySQL said:%@",@"an error occurred while performing the checksum on the %@.\n\nMySQL said:%@"), what, [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while performing the checksum on %@.\n\nMySQL said:%@",@"an error occurred while performing the checksum on the %@.\n\nMySQL said:%@"), what, [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:parentWindow 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -2468,14 +2471,14 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 		userManagerInstance = [[SPUserManager alloc] init];
 		
 		[userManagerInstance setDatabaseDocument:self];
-		[userManagerInstance setConnection:mySQLConnection];
+		[userManagerInstance setConnection:postgresConnection];
 		[userManagerInstance setServerSupport:serverSupport];
 	}
 
 	// Before displaying the user manager make sure the current user has access to the mysql.user table.
-	SPMySQLResult *result = [mySQLConnection queryString:@"SELECT user FROM mysql.user LIMIT 1"];
+	PGPostgresResult *result = [postgresConnection execute:@"SELECT user FROM mysql.user LIMIT 1"];
 	
-	if ([mySQLConnection queryErrored] && ([result numberOfRows] == 0)) {
+	if ([postgresConnection queryErrored] && ([result numberOfRows] == 0)) {
 		
 		NSAlert *alert = [NSAlert alertWithMessageText:NSLocalizedString(@"Unable to get list of users", @"unable to get list of users message")
 										 defaultButton:NSLocalizedString(@"OK", @"OK button") 
@@ -2520,14 +2523,14 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
  */
 - (void)flushPrivileges:(id)sender
 {
-	[mySQLConnection queryString:@"FLUSH PRIVILEGES"];
+	[postgresConnection queryString:@"FLUSH PRIVILEGES"];
 
-	if (![mySQLConnection queryErrored]) {
+	if (![postgresConnection queryErrored]) {
 		//flushed privileges without errors
 		SPBeginAlertSheet(NSLocalizedString(@"Flushed Privileges", @"title of panel when successfully flushed privs"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, NSLocalizedString(@"Successfully flushed privileges.", @"message of panel when successfully flushed privs"));
 	} else {
 		//error while flushing privileges
-		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't flush privileges.\nMySQL said: %@", @"message of panel when flushing privs failed"), [mySQLConnection lastErrorMessage]]);
+		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't flush privileges.\nMySQL said: %@", @"message of panel when flushing privs failed"), [postgresConnection lastErrorMessage]]);
 	}
 }
 
@@ -2546,13 +2549,13 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
  */
 - (void)connect
 {
-	if (mySQLVersion) return;
+	if (postgreSQLVersion) return;
 	[connectionController initiateConnection:self];
 }
 
 - (void)closeConnection
 {
-	[mySQLConnection disconnect];
+	[postgresConnection disconnect];
 	_isConnected = NO;
 
 #ifndef SP_CODA /* growl */
@@ -2571,7 +2574,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
 	if ([keyPath isEqualToString:SPConsoleEnableLogging]) {
-		[mySQLConnection setDelegateQueryLogging:[[change objectForKey:NSKeyValueChangeNewKey] boolValue]];
+		[postgresConnection setDelegateQueryLogging:[[change objectForKey:NSKeyValueChangeNewKey] boolValue]];
 	}
 }
 
@@ -2730,9 +2733,14 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 /**
  * Returns the MySQL version
  */
-- (NSString *)mySQLVersion
+//- (NSString *)mySQLVersion
+//{
+//	return mySQLVersion;
+//}
+
+- (NSString *)postgreSQLVersion
 {
-	return mySQLVersion;
+	return postgreSQLVersion;
 }
 
 /**
@@ -3777,7 +3785,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 		[windowTitle appendString:pathName];
 
 		// Add the MySQL version to the window title if enabled in prefs
-		if ([prefs boolForKey:SPDisplayServerVersionInWindowTitle]) [windowTitle appendFormat:@"(MySQL %@) ", mySQLVersion];
+		if ([prefs boolForKey:SPDisplayServerVersionInWindowTitle]) [windowTitle appendFormat:@"(PostgreSQL %@) ", postgreSQLVersion];
 
 		// Add the name to the window
 		[windowTitle appendString:[self name]];
@@ -4231,7 +4239,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 									object:nil];
 
 
-	[mySQLConnection setDelegate:nil];
+	[postgresConnection setDelegate:nil];
 	if (_isConnected) {
 		[self closeConnection];
 	} else {
@@ -4335,7 +4343,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 {
 #ifndef SP_CODA
 	// If the window is being set for the first time - connection controller is visible - update focus
-	if (!parentWindow && !mySQLConnection) {
+	if (!parentWindow && !postgresConnection) {
 		[aWindow makeFirstResponder:(NSResponder *)[connectionController favoritesOutlineView]];
 	}
 #endif
@@ -4562,7 +4570,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 		}
 		[sessionState setObject:currentlySelectedViewName forKey:@"view"];
 
-		[sessionState setObject:[mySQLConnection encoding] forKey:@"connectionEncoding"];
+		[sessionState setObject:[postgresConnection encoding] forKey:@"connectionEncoding"];
 
 		[sessionState setObject:[NSNumber numberWithBool:[[parentWindow toolbar] isVisible]] forKey:@"isToolbarVisible"];
 		[sessionState setObject:[NSNumber numberWithFloat:[tableContentInstance tablesListWidth]] forKey:@"windowVerticalDividerPosition"];
@@ -4610,7 +4618,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	SPKeychain *keychain = nil;
 
 	// If this document already has a connection, don't proceed.
-	if (mySQLConnection) return NO;
+	if (postgresConnection) return NO;
 
 	// Load the connection data from the state dictionary
 	connection = [NSDictionary dictionaryWithDictionary:[stateDetails objectForKey:@"connection"]];
@@ -4978,7 +4986,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 		[mainToolbar setVisible:[[spfSession objectForKey:@"isToolbarVisible"] boolValue]];
 
 	// Reset database view encoding if differs from default
-	if([spfSession objectForKey:@"connectionEncoding"] && ![[mySQLConnection encoding] isEqualToString:[spfSession objectForKey:@"connectionEncoding"]])
+	if([spfSession objectForKey:@"connectionEncoding"] && ![[postgresConnection encoding] isEqualToString:[spfSession objectForKey:@"connectionEncoding"]])
 		[self setConnectionEncoding:[spfSession objectForKey:@"connectionEncoding"] reloadingViews:YES];
 
 	if(isSelectedTableDefined) {
@@ -5300,7 +5308,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 			if(doSyntaxHighlighting && [params count] < 3) return;
 
-			BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+			BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 
 			NSArray *items = [params subarrayWithRange:NSMakeRange(1, [params count]-( (doSyntaxHighlighting) ? 2 : 1) )];
 			NSArray *availableItems = [tablesListInstance tables];
@@ -5351,23 +5359,23 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 				// Ensure that queries are made in UTF8
 				if (changeEncoding) {
-					[mySQLConnection storeEncodingForRestoration];
-					[mySQLConnection setEncoding:@"utf8"];
+					[postgresConnection storeEncodingForRestoration];
+					[postgresConnection setEncoding:@"utf8"];
 				}
 
 				// Get create syntax
-				SPMySQLResult *queryResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE %@ %@",
+				SPMySQLResult *queryResult = [postgresConnection queryString:[NSString stringWithFormat:@"SHOW CREATE %@ %@",
 															itemTypeStr,
 															[item backtickQuotedString]
 															]];
 				[queryResult setReturnDataAsStrings:YES];
 
-				if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+				if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 				if ( ![queryResult numberOfRows] ) {
 					//error while getting table structure
 					SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [self parentWindow], self, nil, nil,
-									  [NSString stringWithFormat:NSLocalizedString(@"Couldn't get create syntax.\nMySQL said: %@", @"message of panel when table information cannot be retrieved"), [mySQLConnection lastErrorMessage]]);
+									  [NSString stringWithFormat:NSLocalizedString(@"Couldn't get create syntax.\nMySQL said: %@", @"message of panel when table information cannot be retrieved"), [postgresConnection lastErrorMessage]]);
 
 					status = @"1";
 
@@ -5447,10 +5455,10 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 				SPFileHandle *fh = [SPFileHandle fileHandleForWritingAtPath:resultFileName];
 				if(!fh) NSLog(@"Couldn't create file handle to %@", resultFileName);
 
-				SPMySQLResult *theResult = [mySQLConnection streamingQueryString:query];
+				PGPostgresResult *theResult = [postgresConnection streamingQueryString:query];
 				[theResult setReturnDataAsStrings:YES];
-				if ([mySQLConnection queryErrored]) {
-					[fh writeData:[[NSString stringWithFormat:@"MySQL said: %@", [mySQLConnection lastErrorMessage]] dataUsingEncoding:NSUTF8StringEncoding]];
+				if ([postgresConnection queryErrored]) {
+					[fh writeData:[[NSString stringWithFormat:@"MySQL said: %@", [postgresConnection lastErrorMessage]] dataUsingEncoding:NSUTF8StringEncoding]];
 					status = @"1";
 				} else {
 
@@ -5511,7 +5519,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 								else if([cell isKindOfClass:[SPMySQLGeometryData class]])
 									[result appendFormat:@"\"%@\"", [cell wktString]];
 								else if([cell isKindOfClass:[NSData class]]) {
-									NSString *displayString = [[NSString alloc] initWithData:cell encoding:[mySQLConnection stringEncoding]];
+									NSString *displayString = [[NSString alloc] initWithData:cell encoding:[postgresConnection stringEncoding]];
 									if (!displayString) displayString = [[NSString alloc] initWithData:cell encoding:NSASCIIStringEncoding];
 									if (displayString) {
 										[result appendFormat:@"\"%@\"", [displayString stringByReplacingOccurrencesOfString:@"\"" withString:@"\"\""]];
@@ -5550,7 +5558,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 								else if([cell isKindOfClass:[SPMySQLGeometryData class]])
 									[result appendFormat:@"%@", [cell wktString]];
 								else if([cell isKindOfClass:[NSData class]]) {
-									NSString *displayString = [[NSString alloc] initWithData:cell encoding:[mySQLConnection stringEncoding]];
+									NSString *displayString = [[NSString alloc] initWithData:cell encoding:[postgresConnection stringEncoding]];
 									if (!displayString) displayString = [[NSString alloc] initWithData:cell encoding:NSASCIIStringEncoding];
 									if (displayString) {
 										[result appendFormat:@"%@", [[displayString stringByReplacingOccurrencesOfString:@"\n" withString:@"↵"] stringByReplacingOccurrencesOfString:@"\t" withString:@"⇥"]];
@@ -5976,7 +5984,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	}
 
 	// As we're amending identifiers, ensure UTF8
-	if (![[mySQLConnection encoding] isEqualToString:@"utf8"]) [mySQLConnection setEncoding:@"utf8"];
+	if (![[postgresConnection encoding] isEqualToString:@"utf8"]) [postgresConnection setEncoding:@"utf8"];
 	
 	NSString *createStatement = [NSString stringWithFormat:@"CREATE DATABASE %@", [[databaseNameField stringValue] backtickQuotedString]];
 	
@@ -5991,11 +5999,11 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 		createStatement = [NSString stringWithFormat:@"%@ DEFAULT COLLATE %@", createStatement, [collationName backtickQuotedString]];
 	
 	// Create the database
-	[mySQLConnection queryString:createStatement];
+	[postgresConnection queryString:createStatement];
 	
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		// An error occurred
-		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't create database.\nMySQL said: %@", @"message of panel when creation of db failed"), [mySQLConnection lastErrorMessage]]);
+		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't create database.\nMySQL said: %@", @"message of panel when creation of db failed"), [postgresConnection lastErrorMessage]]);
 		
 		return;
 	}
@@ -6030,11 +6038,11 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	}
 	
 	//run alter
-	[mySQLConnection queryString:alterStatement];
+	[postgresConnection execute:alterStatement];
 	
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		// An error occurred
-		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't alter database.\nMySQL said: %@", @"Alter Database : Query Failed ($1 = mysql error message)"), [mySQLConnection lastErrorMessage]]);
+		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, parentWindow, self, nil, nil, [NSString stringWithFormat:NSLocalizedString(@"Couldn't alter database.\nMySQL said: %@", @"Alter Database : Query Failed ($1 = mysql error message)"), [postgresConnection lastErrorMessage]]);
 		return;
 	}
 	
@@ -6048,14 +6056,14 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 - (void)_removeDatabase
 {
 	// Drop the database from the server
-	[mySQLConnection queryString:[NSString stringWithFormat:@"DROP DATABASE %@", [[self database] backtickQuotedString]]];
+	[postgresConnection execute:[NSString stringWithFormat:@"DROP DATABASE %@", [[self database] backtickQuotedString]]];
 	
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		// An error occurred
 		[self performSelector:@selector(showErrorSheetWith:) 
 				   withObject:[NSArray arrayWithObjects:NSLocalizedString(@"Error", @"error"),
 							   [NSString stringWithFormat:NSLocalizedString(@"Couldn't delete the database.\nMySQL said: %@", @"message of panel when deleting db failed"), 
-								[mySQLConnection lastErrorMessage]],
+								[postgresConnection lastErrorMessage]],
 							   nil] 
 				   afterDelay:0.3];
 		
@@ -6075,7 +6083,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	
 	[self setDatabases:self];
 	
-	[tablesListInstance setConnection:mySQLConnection];
+	[tablesListInstance setConnection:postgresConnection];
 	
 #ifndef SP_CODA
 	[self updateWindowTitle:self];
@@ -6118,15 +6126,15 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 		// Attempt to select the specified database, and abort on failure
 #ifndef SP_CODA /* patch */
-		if ([chooseDatabaseButton indexOfItemWithTitle:targetDatabaseName] == NSNotFound || ![mySQLConnection selectDatabase:targetDatabaseName])
+		if ([chooseDatabaseButton indexOfItemWithTitle:targetDatabaseName] == NSNotFound || ![postgresConnection selectDatabase:targetDatabaseName])
 #else
-		if ( ![mySQLConnection selectDatabase:targetDatabaseName] )
+		if ( ![postgresConnection selectDatabase:targetDatabaseName] )
 #endif
 		{
 			// End the task first to ensure the database dropdown can be reselected
 			[self endTask];
 
-			if ([mySQLConnection isConnected]) {
+			if ([postgresConnection isConnected]) {
 
 				// Update the database list
 				[[self onMainThread] setDatabases:self];
@@ -6154,7 +6162,7 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 #endif
 		
 		// Set the connection of SPTablesList to reload tables in db
-		[tablesListInstance setConnection:mySQLConnection];
+		[tablesListInstance setConnection:postgresConnection];
 
 #ifndef SP_CODA /* update history controller and ui manip */
 		// Update the window title
@@ -6343,9 +6351,9 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 	if (processListController) [processListController release];
 	if (serverVariablesController) [serverVariablesController release];
 #endif
-	if (mySQLConnection) [mySQLConnection release], mySQLConnection = nil;
+	if (postgresConnection) [postgresConnection release], postgresConnection = nil;
 	if (selectedDatabase) [selectedDatabase release];
-	if (mySQLVersion) [mySQLVersion release];
+	if (postgreSQLVersion) [postgreSQLVersion release];
 #ifndef SP_CODA
 	if (taskDrawTimer) [taskDrawTimer invalidate], [taskDrawTimer release];
 	if (taskFadeInStartDate) [taskFadeInStartDate release];

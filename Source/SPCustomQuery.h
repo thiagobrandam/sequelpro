@@ -55,6 +55,7 @@
 @class SPSplitView;
 @class SPFieldEditorController;
 @class SPMySQLConnection;
+@class PGPostgresConnection;
 @class SPMySQLStreamingResultStore;
 @class SPTextView;
 
@@ -140,14 +141,16 @@
 	SPQueryFavoriteManager *favoritesManager;
 
 	NSUserDefaults *prefs;
-	SPMySQLConnection *mySQLConnection;
+//	SPMySQLConnection *mySQLConnection;
+	PGPostgresConnection *postgresConnection;
 
 	NSString *usedQuery;
 	NSRange currentQueryRange;
 	NSArray *currentQueryRanges;
 	BOOL currentQueryBeforeCaret;
 
-	NSString *mySQLversion;
+//	NSString *mySQLversion;
+	NSString *postgresVersion;
 	NSTableColumn *sortColumn;
 
 	NSUInteger queryStartPosition;
@@ -278,7 +281,8 @@
 - (void)openMySQLonlineDocumentationWithString:(NSString *)searchString;
 - (NSWindow *)helpWebViewWindow;
 #endif
-- (void)setMySQLversion:(NSString *)theVersion;
+//- (void)setMySQLversion:(NSString *)theVersion;
+- (void)setPostgreSQLVersion:(NSString *)theVersion;
 
 // Task interaction
 - (void)startDocumentTaskForTab:(NSNotification *)aNotification;
