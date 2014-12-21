@@ -38,6 +38,7 @@
 
 #import <pthread.h>
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPTableData (PrivateAPI)
 
@@ -61,7 +62,7 @@
 		triggers = nil;
 		tableEncoding = nil;
 		tableCreateSyntax = nil;
-		mySQLConnection = nil;
+		postgresConnection = nil;
 		tableHasAutoIncrementField = NO;
 
 		pthread_mutex_init(&dataProcessingLock, NULL);
@@ -468,15 +469,15 @@
 	NSString *encodingString = nil;
 	NSUInteger i, stringStart;
 	unichar quoteCharacter;
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 
 	// Catch unselected tables and return nil
 	if ([tableName isEqualToString:@""] || !tableName) return nil;
 
 	// Ensure the encoding is set to UTF8
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
 	// In cases where this method is called directly instead of via -updateInformationForCurrentTable
@@ -485,17 +486,17 @@
 	[constraints removeAllObjects];
 
 	// Retrieve the CREATE TABLE syntax for the table
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE TABLE %@", [tableName backtickQuotedString]]];
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW CREATE TABLE %@", [tableName backtickQuotedString]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	// Check for any errors, but only display them if a connection still exists
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 			NSString *errorMessage = [NSString stringWithFormat:NSLocalizedString(@"An error occurred while retrieving the information for table '%@'. Please try again.\n\nMySQL said: %@", @"error retrieving table information informative message"),
-					   tableName, [mySQLConnection lastErrorMessage]];
+					   tableName, [postgresConnection lastErrorMessage]];
 
 			// If the current table doesn't exist anymore reload table list
-			if([mySQLConnection lastErrorID] == 1146) {
+			if([postgresConnection lastErrorID] == 1146) {
 
 				// Release the table loading lock to allow reselection/reloading to requery the database.
 				pthread_mutex_unlock(&dataProcessingLock);
@@ -507,7 +508,7 @@
 			SPBeginAlertSheet(NSLocalizedString(@"Error retrieving table information", @"error retrieving table information message"), NSLocalizedString(@"OK", @"OK button"),
 					nil, nil, [NSApp mainWindow], self, nil, nil, errorMessage);
 
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		}
 
 		return nil;
@@ -531,7 +532,7 @@
 			 informativeTextWithFormat:NSLocalizedString(@"The creation syntax could not be retrieved due to a permissions error.\n\nPlease check your user permissions with an administrator.", @"Create syntax permission denied detail")]
 			  beginSheetModalForWindow:[NSApp mainWindow]
 						 modalDelegate:self didEndSelector:NULL contextInfo:NULL];
-		if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+		if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		return nil;
 	}
 
@@ -816,7 +817,7 @@
 	[encodingString release];
 	[tableColumns release];
 
-	if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+	if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 	return tableData;
 }
@@ -835,31 +836,31 @@
 	NSMutableArray *tableColumns;
 	NSDictionary *resultRow;
 	NSMutableDictionary *tableColumn, *viewData;
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 
 	// Catch unselected views and return nil
 	if ([viewName isEqualToString:@""] || !viewName) return nil;
 
 	// Ensure that queries are made in UTF8
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
 	// Retrieve the CREATE TABLE syntax for the table
-	SPMySQLResult *theResult = [mySQLConnection queryString: [NSString stringWithFormat: @"SHOW CREATE TABLE %@",
+	PGPostgresResult *theResult = [postgresConnection execute: [NSString stringWithFormat: @"SHOW CREATE TABLE %@",
 																					   [viewName backtickQuotedString]
 																					]];
 	[theResult setReturnDataAsStrings:YES];
 
 	// Check for any errors, but only display them if a connection still exists
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"),
 					nil, nil, [NSApp mainWindow], self, nil, nil,
 					[NSString stringWithFormat:NSLocalizedString(@"An error occurred while retrieving information.\nMySQL said: %@", @"message of panel when retrieving information failed"),
-					   [mySQLConnection lastErrorMessage]]);
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+					   [postgresConnection lastErrorMessage]]);
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		}
 		return nil;
 	}
@@ -876,24 +877,24 @@
 			 informativeTextWithFormat:NSLocalizedString(@"The creation syntax could not be retrieved due to a permissions error.\n\nPlease check your user permissions with an administrator.", @"Create syntax permission denied detail")]
 			  beginSheetModalForWindow:[NSApp mainWindow]
 						 modalDelegate:self didEndSelector:NULL contextInfo:NULL];
-		if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+		if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		return nil;
 	}
 
 	tableCreateSyntax = [[NSString alloc] initWithString:syntaxString];
 
 	// Retrieve the SHOW COLUMNS syntax for the table
-	theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [viewName backtickQuotedString]]];
+	theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [viewName backtickQuotedString]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	// Check for any errors, but only display them if a connection still exists
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"),
 					nil, nil, [NSApp mainWindow], self, nil, nil,
 					[NSString stringWithFormat:NSLocalizedString(@"An error occurred while retrieving information.\nMySQL said: %@", @"message of panel when retrieving information failed"),
-					   [mySQLConnection lastErrorMessage]]);
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+					   [postgresConnection lastErrorMessage]]);
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		}
 		return nil;
 	}
@@ -941,7 +942,7 @@
 
 	[tableColumns release];
 
-	if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+	if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 	return viewData;
 }
@@ -953,7 +954,7 @@
 {
 	pthread_mutex_lock(&dataProcessingLock);
 
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 
 	// Catch unselected tables and return false
 	if (![tableListInstance tableName]) {
@@ -963,8 +964,8 @@
 
 	// Ensure queries are run as UTF8
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
 	// Run the status query and retrieve as a dictionary.
@@ -972,37 +973,37 @@
 	[escapedTableName replaceOccurrencesOfString:@"\\" withString:@"\\\\" options:0 range:NSMakeRange(0, [escapedTableName length])];
 	[escapedTableName replaceOccurrencesOfString:@"'" withString:@"\\\'" options:0 range:NSMakeRange(0, [escapedTableName length])];
 
-	SPMySQLResult *tableStatusResult = nil;
+	PGPostgresResult *tableStatusResult = nil;
 
 	if ([tableListInstance tableType] == SPTableTypeProc) {
 		NSMutableString *escapedDatabaseName = [NSMutableString stringWithString:[tableDocumentInstance database]];
 		[escapedDatabaseName replaceOccurrencesOfString:@"'" withString:@"\\\'" options:0 range:NSMakeRange(0, [escapedDatabaseName length])];
-		tableStatusResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT * FROM information_schema.ROUTINES AS r WHERE r.SPECIFIC_NAME = '%@' AND r.ROUTINE_SCHEMA = '%@' AND r.ROUTINE_TYPE = 'PROCEDURE'", escapedTableName, escapedDatabaseName]];
+		tableStatusResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT * FROM information_schema.ROUTINES AS r WHERE r.SPECIFIC_NAME = '%@' AND r.ROUTINE_SCHEMA = '%@' AND r.ROUTINE_TYPE = 'PROCEDURE'", escapedTableName, escapedDatabaseName]];
 	}
 	else if ([tableListInstance tableType] == SPTableTypeFunc) {
 		NSMutableString *escapedDatabaseName = [NSMutableString stringWithString:[tableDocumentInstance database]];
 		[escapedDatabaseName replaceOccurrencesOfString:@"'" withString:@"\\\'" options:0 range:NSMakeRange(0, [escapedDatabaseName length])];
-		tableStatusResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT * FROM information_schema.ROUTINES AS r WHERE r.SPECIFIC_NAME = '%@' AND r.ROUTINE_SCHEMA = '%@' AND r.ROUTINE_TYPE = 'FUNCTION'", escapedTableName, escapedDatabaseName]];
+		tableStatusResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT * FROM information_schema.ROUTINES AS r WHERE r.SPECIFIC_NAME = '%@' AND r.ROUTINE_SCHEMA = '%@' AND r.ROUTINE_TYPE = 'FUNCTION'", escapedTableName, escapedDatabaseName]];
 	}
 	else if ([tableListInstance tableType] == SPTableTypeView) {
 		NSMutableString *escapedDatabaseName = [NSMutableString stringWithString:[tableDocumentInstance database]];
 		[escapedDatabaseName replaceOccurrencesOfString:@"'" withString:@"\\\'" options:0 range:NSMakeRange(0, [escapedDatabaseName length])];
-		tableStatusResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT * FROM information_schema.VIEWS AS r WHERE r.TABLE_NAME = '%@' AND r.TABLE_SCHEMA = '%@'", escapedTableName, escapedDatabaseName]];
+		tableStatusResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT * FROM information_schema.VIEWS AS r WHERE r.TABLE_NAME = '%@' AND r.TABLE_SCHEMA = '%@'", escapedTableName, escapedDatabaseName]];
 	}
 	else if ([tableListInstance tableType] == SPTableTypeTable) {
 		[escapedTableName replaceOccurrencesOfRegex:@"\\\\(?=\\Z|[^\'])" withString:@"\\\\\\\\"];
-		tableStatusResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW TABLE STATUS LIKE '%@'", escapedTableName ]];
+		tableStatusResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW TABLE STATUS LIKE '%@'", escapedTableName ]];
 		[tableStatusResult setReturnDataAsStrings:YES];
 	}
 
 	// Check for any errors, only displaying them if the connection hasn't been terminated
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"),
 					nil, nil, [NSApp mainWindow], self, nil, nil,
 					[NSString stringWithFormat:NSLocalizedString(@"An error occured while retrieving status data.\nMySQL said: %@", @"message of panel when retrieving view information failed"),
-					   [mySQLConnection lastErrorMessage]]);
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+					   [postgresConnection lastErrorMessage]]);
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		}
 		pthread_mutex_unlock(&dataProcessingLock);
 		return FALSE;
@@ -1021,7 +1022,7 @@
 		// If the "Engine" key is NULL, a problem occurred when retrieving the table information.
 		if ([[status objectForKey:@"Engine"] isNSNull]) {
 			[status setDictionary:[NSDictionary dictionaryWithObjectsAndKeys:@"Error", @"Engine", [NSString stringWithFormat:NSLocalizedString(@"An error occurred retrieving table information.  MySQL said: %@", @"MySQL table info retrieval error message"), [status objectForKey:@"Comment"]], @"Comment", [tableListInstance tableName], @"Name", nil]];
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 			pthread_mutex_unlock(&dataProcessingLock);
 			return FALSE;
 		}
@@ -1036,8 +1037,8 @@
 		// [status objectForKey:@"Rows"] is NULL then try to get the number of rows via SELECT COUNT(1) FROM `foo`
 		// this happens e.g. for db "information_schema"
 		if([[status objectForKey:@"Rows"] isNSNull]) {
-			tableStatusResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [escapedTableName backtickQuotedString] ]];
-			if (![mySQLConnection queryErrored])
+			tableStatusResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [escapedTableName backtickQuotedString] ]];
+			if (![postgresConnection queryErrored])
 				[status setObject:[[tableStatusResult getRowAsArray] objectAtIndex:0] forKey:@"Rows"];
 				[status setObject:@"y" forKey:@"RowsCountAccurate"];
 		}
@@ -1055,7 +1056,7 @@
 			nil]];
 	}
 
-	if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+	if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 	pthread_mutex_unlock(&dataProcessingLock);
 
@@ -1070,25 +1071,25 @@
 	pthread_mutex_lock(&dataProcessingLock);
 
 	// Ensure queries are made in UTF8
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"/*!50003 SHOW TRIGGERS WHERE `Table` = %@ */",
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"/*!50003 SHOW TRIGGERS WHERE `Table` = %@ */",
 											  [[tableListInstance tableName] tickQuotedString]]];
 	[theResult setReturnDataAsStrings:YES];
 
 	// Check for any errors, but only display them if a connection still exists
-	if ([mySQLConnection queryErrored]) {
-		if ([mySQLConnection isConnected]) {
+	if ([postgresConnection queryErrored]) {
+		if ([postgresConnection isConnected]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error retrieving trigger information", @"error retrieving trigger information message"), NSLocalizedString(@"OK", @"OK button"),
 							  nil, nil, [NSApp mainWindow], self, nil, nil,
 							  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while retrieving the trigger information for table '%@'. Please try again.\n\nMySQL said: %@", @"error retrieving table information informative message"),
-							  [tableListInstance tableName], [mySQLConnection lastErrorMessage]]);
+							  [tableListInstance tableName], [postgresConnection lastErrorMessage]]);
 			if (triggers) [triggers release], triggers = nil;
-			if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+			if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		}
 
 		pthread_mutex_unlock(&dataProcessingLock);
@@ -1098,7 +1099,7 @@
 	if (triggers) [triggers release];
 	triggers = [[NSArray alloc] initWithArray:[theResult getAllRows]];
 
-	if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+	if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 	pthread_mutex_unlock(&dataProcessingLock);
 
@@ -1148,8 +1149,8 @@
 	}
 
 	// Fetch the number of rows
-	SPMySQLResult *rowResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [[tableListInstance tableName] backtickQuotedString]]];
-	if ([mySQLConnection queryErrored]) {
+	PGPostgresResult *rowResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [[tableListInstance tableName] backtickQuotedString]]];
+	if ([postgresConnection queryErrored]) {
 		return NO;
 	}
 
@@ -1408,7 +1409,7 @@
 	if (triggers) [triggers release];
 	if (tableEncoding) [tableEncoding release];
 	if (tableCreateSyntax) [tableCreateSyntax release];
-	if (mySQLConnection) [mySQLConnection release];
+	if (postgresConnection) [postgresConnection release];
 
 	pthread_mutex_destroy(&dataProcessingLock);
 

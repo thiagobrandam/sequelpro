@@ -155,7 +155,8 @@
 #endif
 - (void) doSyntaxHighlighting;
 - (NSBezierPath*)roundedBezierPathAroundRange:(NSRange)aRange;
-- (void) setConnection:(SPMySQLConnection *)theConnection withVersion:(NSInteger)majorVersion;
+//- (void) setConnection:(SPMySQLConnection *)theConnection withVersion:(NSInteger)majorVersion;
+- (void)setConnection:(PGPostgresConnection *)theConnection withVersion:(NSInteger)majorVersion;
 - (void) doCompletionByUsingSpellChecker:(BOOL)isDictMode fuzzyMode:(BOOL)fuzzySearch autoCompleteMode:(BOOL)autoCompleteMode;
 - (void) doAutoCompletion;
 - (void) refreshCompletion;

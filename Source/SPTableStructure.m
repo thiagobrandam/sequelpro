@@ -48,6 +48,7 @@
 #import "SPServerSupport.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 static NSString *SPRemoveField = @"SPRemoveField";
 static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
@@ -278,21 +279,21 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
  */
 - (IBAction)showOptimizedFieldType:(id)sender
 {
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT %@ FROM %@ PROCEDURE ANALYSE(0,8192)", 
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT %@ FROM %@ PROCEDURE ANALYSE(0,8192)",
 		[[[tableFields objectAtIndex:[tableSourceView selectedRow]] objectForKey:@"name"] backtickQuotedString],
 		[selectedTable backtickQuotedString]]];
 
 	// Check for errors
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		NSString *message = NSLocalizedString(@"Error while fetching the optimized field type", @"error while fetching the optimized field type message");
 		
-		if ([mySQLConnection isConnected]) {
+		if ([postgresConnection isConnected]) {
 
 			[[NSAlert alertWithMessageText:message 
 							 defaultButton:@"OK" 
 						   alternateButton:nil 
 							   otherButton:nil 
-				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while fetching the optimized field type.\n\nMySQL said:%@", @"an error occurred while fetching the optimized field type.\n\nMySQL said:%@"), [mySQLConnection lastErrorMessage]]
+				 informativeTextWithFormat:NSLocalizedString(@"An error occurred while fetching the optimized field type.\n\nMySQL said:%@", @"an error occurred while fetching the optimized field type.\n\nMySQL said:%@"), [postgresConnection lastErrorMessage]]
 				  beginSheetModalForWindow:[tableDocumentInstance parentWindow] 
 							 modalDelegate:self 
 							didEndSelector:NULL 
@@ -622,14 +623,14 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 	NSNumber *autoIncValue = [formatter numberFromString:valueAsString];
 	[formatter release];
 
-	[mySQLConnection queryString:[NSString stringWithFormat:@"ALTER TABLE %@ AUTO_INCREMENT = %@", [selTable backtickQuotedString], [autoIncValue stringValue]]];
+	[postgresConnection execute:[NSString stringWithFormat:@"ALTER TABLE %@ AUTO_INCREMENT = %@", [selTable backtickQuotedString], [autoIncValue stringValue]]];
 
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"),
 						  NSLocalizedString(@"OK", @"OK button"),
 						  nil, nil, [NSApp mainWindow], nil, nil, nil,
 						  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to reset AUTO_INCREMENT of table '%@'.\n\nMySQL said: %@", @"error resetting auto_increment informative message"),
-								selTable, [mySQLConnection lastErrorMessage]]);
+								selTable, [postgresConnection lastErrorMessage]]);
 	}
 
 	// reload data
@@ -791,7 +792,7 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 		}
 		// Otherwise, use the provided default
 		else {
-			[queryString appendFormat:@"\n DEFAULT %@ ", [mySQLConnection escapeAndQuoteString:[theRow objectForKey:@"default"]]];
+			[queryString appendFormat:@"\n DEFAULT %@ ", [postgresConnection escapeAndQuoteString:[theRow objectForKey:@"default"]]];
 		}
 	}
 
@@ -878,7 +879,7 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 			}
 			// Otherwise, use the provided default
 			else {
-				[queryString appendFormat:@"\n DEFAULT %@", [mySQLConnection escapeAndQuoteString:[theRow objectForKey:@"default"]]];
+				[queryString appendFormat:@"\n DEFAULT %@", [postgresConnection escapeAndQuoteString:[theRow objectForKey:@"default"]]];
 			}
 		}
 
@@ -889,7 +890,7 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 
 	// Any column comments
 	if ([(NSString *)[theRow objectForKey:@"comment"] length]) {
-		[queryString appendFormat:@"\n COMMENT %@", [mySQLConnection escapeAndQuoteString:[theRow objectForKey:@"comment"]]];
+		[queryString appendFormat:@"\n COMMENT %@", [postgresConnection escapeAndQuoteString:[theRow objectForKey:@"comment"]]];
 	}
 
 	if (!isEditingNewRow) {
@@ -949,9 +950,9 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 	autoIncrementIndex = nil;
 
 	// Execute query
-	[mySQLConnection queryString:queryString];
+	[postgresConnection execute:queryString];
 
-	if (![mySQLConnection queryErrored]) {
+	if (![postgresConnection queryErrored]) {
 		isEditingRow = NO;
 		isEditingNewRow = NO;
 		currentlyEditingRow = -1;
@@ -970,12 +971,12 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 	}
 	else {
 		alertSheetOpened = YES;
-		if([mySQLConnection lastErrorID] == 1146) { // If the current table doesn't exist anymore
+		if([postgresConnection lastErrorID] == 1146) { // If the current table doesn't exist anymore
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"),
 							  NSLocalizedString(@"OK", @"OK button"),
 							  nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
 							  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to alter table '%@'.\n\nMySQL said: %@", @"error while trying to alter table message"),
-							  selectedTable, [mySQLConnection lastErrorMessage]]);
+							  selectedTable, [postgresConnection lastErrorMessage]]);
 
 			isEditingRow = NO;
 			isEditingNewRow = NO;
@@ -1000,14 +1001,14 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 							  NSLocalizedString(@"Edit row", @"Edit row button"),
 							  NSLocalizedString(@"Discard changes", @"discard changes button"), nil, [tableDocumentInstance parentWindow], self, @selector(addRowErrorSheetDidEnd:returnCode:contextInfo:), nil,
 							  [NSString stringWithFormat:NSLocalizedString(@"An error occurred when trying to add the field '%@' via\n\n%@\n\nMySQL said: %@", @"error adding field informative message"),
-							  [theRow objectForKey:@"name"], queryString, [mySQLConnection lastErrorMessage]]);
+							  [theRow objectForKey:@"name"], queryString, [postgresConnection lastErrorMessage]]);
 		}
 		else {
 			SPBeginAlertSheet(NSLocalizedString(@"Error changing field", @"error changing field message"),
 							  NSLocalizedString(@"Edit row", @"Edit row button"),
 							  NSLocalizedString(@"Discard changes", @"discard changes button"), nil, [tableDocumentInstance parentWindow], self, @selector(addRowErrorSheetDidEnd:returnCode:contextInfo:), nil,
 							  [NSString stringWithFormat:NSLocalizedString(@"An error occurred when trying to change the field '%@' via\n\n%@\n\nMySQL said: %@", @"error changing field informative message"),
-							  [theRow objectForKey:@"name"], queryString, [mySQLConnection lastErrorMessage]]);
+							  [theRow objectForKey:@"name"], queryString, [postgresConnection lastErrorMessage]]);
 		}
 
 		return NO;
@@ -1272,8 +1273,8 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 	NSString *nullValue = [prefs stringForKey:SPNullValue];
 	CFStringRef escapedNullValue = CFXMLCreateStringByEscapingEntities(NULL, ((CFStringRef)nullValue), NULL);
 
-	SPMySQLResult *structureQueryResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
-	SPMySQLResult *indexesQueryResult   = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW INDEXES FROM %@", [selectedTable backtickQuotedString]]];
+	PGPostgresResult *structureQueryResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
+	PGPostgresResult *indexesQueryResult   = [postgresConnection execute:[NSString stringWithFormat:@"SHOW INDEXES FROM %@", [selectedTable backtickQuotedString]]];
 
 	[structureQueryResult setReturnDataAsStrings:YES];
 	[indexesQueryResult setReturnDataAsStrings:YES];
@@ -1422,28 +1423,28 @@ static NSString *SPRemoveFieldAndForeignKey = @"SPRemoveFieldAndForeignKey";
 			}
 		}
 
-		[mySQLConnection queryString:[NSString stringWithFormat:@"ALTER TABLE %@ DROP FOREIGN KEY %@", [selectedTable backtickQuotedString], [relationName backtickQuotedString]]];
+		[postgresConnection execute:[NSString stringWithFormat:@"ALTER TABLE %@ DROP FOREIGN KEY %@", [selectedTable backtickQuotedString], [relationName backtickQuotedString]]];
 
 		// Check for errors, but only if the query wasn't cancelled
-		if ([mySQLConnection queryErrored] && ![mySQLConnection lastQueryWasCancelled]) {
+		if ([postgresConnection queryErrored] && ![postgresConnection lastQueryWasCancelled]) {
 			NSMutableDictionary *errorDictionary = [NSMutableDictionary dictionary];
 			[errorDictionary setObject:NSLocalizedString(@"Unable to delete relation", @"error deleting relation message") forKey:@"title"];
-			[errorDictionary setObject:[NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to delete the relation '%@'.\n\nMySQL said: %@", @"error deleting relation informative message"), relationName, [mySQLConnection lastErrorMessage]] forKey:@"message"];
+			[errorDictionary setObject:[NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to delete the relation '%@'.\n\nMySQL said: %@", @"error deleting relation informative message"), relationName, [postgresConnection lastErrorMessage]] forKey:@"message"];
 			[[self onMainThread] showErrorSheetWith:errorDictionary];
 		}
 	}
 
 	// Remove field
-	[mySQLConnection queryString:[NSString stringWithFormat:@"ALTER TABLE %@ DROP %@",
+	[postgresConnection execute:[NSString stringWithFormat:@"ALTER TABLE %@ DROP %@",
 								  [selectedTable backtickQuotedString], [[[tableFields objectAtIndex:[tableSourceView selectedRow]] objectForKey:@"name"] backtickQuotedString]]];
 
 	// Check for errors, but only if the query wasn't cancelled
-	if ([mySQLConnection queryErrored] && ![mySQLConnection lastQueryWasCancelled]) {
+	if ([postgresConnection queryErrored] && ![postgresConnection lastQueryWasCancelled]) {
 		NSMutableDictionary *errorDictionary = [NSMutableDictionary dictionary];
 		[errorDictionary setObject:NSLocalizedString(@"Error", @"error") forKey:@"title"];
 		[errorDictionary setObject:[NSString stringWithFormat:NSLocalizedString(@"Couldn't delete field %@.\nMySQL said: %@", @"message of panel when field cannot be deleted"),
 									[[tableFields objectAtIndex:[tableSourceView selectedRow]] objectForKey:@"name"],
-									[mySQLConnection lastErrorMessage]] forKey:@"message"];
+									[postgresConnection lastErrorMessage]] forKey:@"message"];
 		
 		[[self onMainThread] showErrorSheetWith:errorDictionary];
 	}

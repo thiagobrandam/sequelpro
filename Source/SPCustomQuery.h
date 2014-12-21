@@ -292,7 +292,8 @@
 - (void)tableSortCallback;
 
 // Other
-- (void)setConnection:(SPMySQLConnection *)theConnection;
+//- (void)setConnection:(SPMySQLConnection *)theConnection;
+- (void)setConnection:(PGPostgresConnection *)theConnection;
 - (void)doPerformQueryService:(NSString *)query;
 - (void)doPerformLoadQueryService:(NSString *)query;
 - (void)selectCurrentQuery;

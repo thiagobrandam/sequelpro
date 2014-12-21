@@ -49,6 +49,7 @@
 #import "SPThreadAdditions.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 #define SP_FILE_READ_ERROR_STRING NSLocalizedString(@"File read error", @"File read error title (Import Dialog)")
 
@@ -246,7 +247,7 @@
 	if ([[[importFormatPopup selectedItem] title] isEqualToString:@"SQL"])
 		encoding = NSUTF8StringEncoding;
 	else
-		encoding = [mySQLConnection stringEncoding];
+		encoding = [postgresConnection stringEncoding];
 
 	if(![[[NSPasteboard generalPasteboard] stringForType:NSStringPboardType] writeToFile:importFileName atomically:NO encoding:encoding error:nil]) {
 		NSBeep();
@@ -416,8 +417,8 @@
 	if (![importEncodingPopup indexOfSelectedItem]) {
 		sqlEncoding = [[NSFileManager defaultManager] detectEncodingforFileAtPath:filename];
 		if ([SPMySQLConnection mySQLCharsetForStringEncoding:sqlEncoding]) {
-			connectionEncodingToRestore = [mySQLConnection encoding];
-			[mySQLConnection queryString:[NSString stringWithFormat:@"SET NAMES '%@'", [SPMySQLConnection mySQLCharsetForStringEncoding:sqlEncoding]]];
+			connectionEncodingToRestore = [postgresConnection encoding];
+			[postgresConnection execute:[NSString stringWithFormat:@"SET NAMES '%@'", [SPMySQLConnection mySQLCharsetForStringEncoding:sqlEncoding]]];
 		}
 
 	// Otherwise, get the encoding to use from the menu
@@ -440,7 +441,7 @@
 		// Report file read errors, and bail
 		@catch (NSException *exception) {
 			if (connectionEncodingToRestore) {
-				[mySQLConnection queryString:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
+				[postgresConnection execute:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
 			}
 			[self closeAndStopProgressSheet];
 			SPBeginAlertSheet(SP_FILE_READ_ERROR_STRING,
@@ -484,7 +485,7 @@
 												  encoding:sqlEncoding];
 				if (!sqlString) {
 					if (connectionEncodingToRestore) {
-						[mySQLConnection queryString:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
+						[postgresConnection execute:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
 					}
 					[self closeAndStopProgressSheet];
 					NSString *displayEncoding;
@@ -526,7 +527,7 @@
 		
 		// Before entering the following loop, check that we actually have a connection.
 		// If not, check the connection if appropriate and then clean up and exit if appropriate.
-		if (![mySQLConnection isConnected] && ([mySQLConnection userTriggeredDisconnect] || ![mySQLConnection checkConnection])) {
+		if (![postgresConnection isConnected] && ([postgresConnection userTriggeredDisconnect] || ![postgresConnection checkConnection])) {
 			if ([filename hasPrefix:SPImportClipboardTempFileNamePrefix])
 				[[NSFileManager defaultManager] removeItemAtPath:filename error:nil];
 			[self closeAndStopProgressSheet];
@@ -554,11 +555,11 @@
 			if (![query length]) continue;
 			
 			// Run the query
-			[mySQLConnection queryString:query usingEncoding:sqlEncoding withResultType:SPMySQLResultAsResult];
+			[postgresConnection execute:query usingEncoding:sqlEncoding withResultType:SPMySQLResultAsResult];
 
 			// Check for any errors
-			if ([mySQLConnection queryErrored] && ![[mySQLConnection lastErrorMessage] isEqualToString:@"Query was empty"]) {
-				[errors appendFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [mySQLConnection lastErrorMessage]];
+			if ([postgresConnection queryErrored] && ![[postgresConnection lastErrorMessage] isEqualToString:@"Query was empty"]) {
+				[errors appendFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [postgresConnection lastErrorMessage]];
 
 				// If not set to ignore errors, ask what to do.  Use NSAlert rather than
 				// SPBeginWaitingAlertSheet as there is already a modal sheet in progress.
@@ -570,7 +571,7 @@
 								   defaultButton:NSLocalizedString(@"Continue", @"continue button")
 								 alternateButton:NSLocalizedString(@"Ignore All Errors", @"ignore errors button")
 									 otherButton:NSLocalizedString(@"Stop", @"stop button")
-					   informativeTextWithFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [mySQLConnection lastErrorMessage]
+					   informativeTextWithFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [postgresConnection lastErrorMessage]
 					];
 					[sqlErrorAlert setAlertStyle:NSWarningAlertStyle];
 					sqlImportErrorSheetReturnCode = [sqlErrorAlert runModal];
@@ -622,11 +623,11 @@
 	if ([query length] && !progressCancelled) {
 
 		// Run the query
-		[mySQLConnection queryString:query usingEncoding:sqlEncoding withResultType:SPMySQLResultAsResult];
+		[postgresConnection execute:query usingEncoding:sqlEncoding withResultType:SPMySQLResultAsResult];
 
 		// Check for any errors
-		if ([mySQLConnection queryErrored] && ![[mySQLConnection lastErrorMessage] isEqualToString:@"Query was empty"]) {
-			[errors appendFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [mySQLConnection lastErrorMessage]];
+		if ([postgresConnection queryErrored] && ![[postgresConnection lastErrorMessage] isEqualToString:@"Query was empty"]) {
+			[errors appendFormat:NSLocalizedString(@"[ERROR in query %ld] %@\n", @"error text when multiple custom query failed"), (long)(queriesPerformed+1), [postgresConnection lastErrorMessage]];
 		}
 
 		// Increment the processed queries count
@@ -635,7 +636,7 @@
 
 	// Clean up
 	if (connectionEncodingToRestore) {
-		[mySQLConnection queryString:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
+		[postgresConnection execute:[NSString stringWithFormat:@"SET NAMES '%@'", connectionEncodingToRestore]];
 	}
 	[sqlParser release];
 	[sqlDataBuffer release];
@@ -716,7 +717,7 @@
 	BOOL allDataRead = NO;
 	BOOL insertBaseStringHasEntries;
 	
-	NSStringEncoding csvEncoding = [mySQLConnection stringEncoding];
+	NSStringEncoding csvEncoding = [postgresConnection stringEncoding];
 
 	fieldMappingArray = nil;
 	fieldMappingGlobalValueArray = nil;
@@ -984,7 +985,7 @@
 			
 			// Before entering the following loop, check that we actually have a connection.
 			// If not, check the connection if appropriate and then clean up and exit if appropriate.
-			if (![mySQLConnection isConnected] && ([mySQLConnection userTriggeredDisconnect] || ![mySQLConnection checkConnection])) {
+			if (![postgresConnection isConnected] && ([postgresConnection userTriggeredDisconnect] || ![postgresConnection checkConnection])) {
 				[self closeAndStopProgressSheet];
 				[csvParser release];
 				[csvDataBuffer release];
@@ -1016,9 +1017,9 @@
 
 					// Perform the query
 					if(csvImportMethodHasTail)
-						[mySQLConnection queryString:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
+						[postgresConnection execute:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
 					else
-						[mySQLConnection queryString:query];
+						[postgresConnection execute:query];
 					[query release];
 				} else {
 					if(insertRemainingRowsAfterUpdate) {
@@ -1042,33 +1043,33 @@
 
 						// Perform the query
 						if(csvImportMethodHasTail)
-							[mySQLConnection queryString:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
+							[postgresConnection execute:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
 						else
-							[mySQLConnection queryString:query];
+							[postgresConnection execute:query];
 						[query release];
 
-						if ([mySQLConnection queryErrored]) {
+						if ([postgresConnection queryErrored]) {
 							[tableDocumentInstance showConsole:nil];
 							[errors appendFormat:
 								NSLocalizedString(@"[ERROR in row %ld] %@\n", @"error text when reading of csv file gave errors"),
-								(long)(rowsImported+1),[mySQLConnection lastErrorMessage]];
+								(long)(rowsImported+1),[postgresConnection lastErrorMessage]];
 						}
 
-						if ( insertRemainingRowsAfterUpdate && ![mySQLConnection rowsAffectedByLastQuery]) {
+						if ( insertRemainingRowsAfterUpdate && ![postgresConnection rowsAffectedByLastQuery]) {
 							query = [[NSMutableString alloc] initWithString:insertRemainingBaseString];
 							[query appendString:[self mappedValueStringForRowArray:[parsedRows objectAtIndex:i]]];
 
 							// Perform the query
 							if(csvImportMethodHasTail)
-								[mySQLConnection queryString:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
+								[postgresConnection execute:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
 							else
-								[mySQLConnection queryString:query];
+								[postgresConnection execute:query];
 							[query release];
 
-							if ([mySQLConnection queryErrored]) {
+							if ([postgresConnection queryErrored]) {
 								[errors appendFormat:
 									NSLocalizedString(@"[ERROR in row %ld] %@\n", @"error text when reading of csv file gave errors"),
-									(long)(rowsImported+1),[mySQLConnection lastErrorMessage]];
+									(long)(rowsImported+1),[postgresConnection lastErrorMessage]];
 							}
 						}
 
@@ -1087,7 +1088,7 @@
 				}
 
 				// If an error occurred, run the queries individually to get exact line errors
-				if (!importMethodIsUpdate && [mySQLConnection queryErrored]) {
+				if (!importMethodIsUpdate && [postgresConnection queryErrored]) {
 					[tableDocumentInstance showConsole:nil];
 					for (i = 0; i < csvRowsThisQuery; i++) {
 						if (progressCancelled) break;
@@ -1096,15 +1097,15 @@
 
 						// Perform the query
 						if(csvImportMethodHasTail)
-							[mySQLConnection queryString:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
+							[postgresConnection execute:[NSString stringWithFormat:@"%@ %@", query, csvImportTailString]];
 						else
-							[mySQLConnection queryString:query];
+							[postgresConnection execute:query];
 						[query release];
 
-						if ([mySQLConnection queryErrored]) {
+						if ([postgresConnection queryErrored]) {
 							[errors appendFormat:
 								NSLocalizedString(@"[ERROR in row %ld] %@\n", @"error text when reading of csv file gave errors"),
-								(long)(rowsImported+1),[mySQLConnection lastErrorMessage]];
+								(long)(rowsImported+1),[postgresConnection lastErrorMessage]];
 						}
 						rowsImported++;
 						if (fileIsCompressed) {
@@ -1242,7 +1243,7 @@
 
 	// Init the field mapper controller
 	fieldMapperController = [(SPFieldMapperController *)[SPFieldMapperController alloc] initWithDelegate:self];
-	[fieldMapperController setConnection:mySQLConnection];
+	[fieldMapperController setConnection:postgresConnection];
 	[fieldMapperController setSourcePath:filename];
 	[fieldMapperController setImportDataArray:fieldMappingImportArray hasHeader:[importFieldNamesSwitch state] isPreview:fieldMappingImportArrayIsPreview];
 
@@ -1295,7 +1296,7 @@
 
 	// Store target table definitions
 	SPTableData *selectedTableData = [[SPTableData alloc] init];
-	[selectedTableData setConnection:mySQLConnection];
+	[selectedTableData setConnection:postgresConnection];
 	targetTableDetails = [selectedTableData informationForTable:selectedTableTarget];
 	[selectedTableData release];
 
@@ -1401,7 +1402,7 @@
 				if ([cellData isNSNull]) {
 					[setString appendString:@"NULL"];
 				} else {
-					[setString appendString:[mySQLConnection escapeAndQuoteString:cellData]];
+					[setString appendString:[postgresConnection escapeAndQuoteString:cellData]];
 				}
 			}
 		}
@@ -1454,7 +1455,7 @@
 					[whereString appendString:@" IS NULL"];
 				} else {
 					[whereString appendString:@"="];
-					[whereString appendString:[mySQLConnection escapeAndQuoteString:cellData]];
+					[whereString appendString:[postgresConnection escapeAndQuoteString:cellData]];
 				}
 			}
 		}
@@ -1535,9 +1536,9 @@
 					[valueString appendString:[(NSString*)cellData getGeomFromTextString]];
 				} else if([bitFields count] && [bitFieldsMapIndex containsIndex:i]) {
 					[valueString appendString:@"b"];
-					[valueString appendString:[mySQLConnection escapeAndQuoteString:cellData]];
+					[valueString appendString:[postgresConnection escapeAndQuoteString:cellData]];
 				} else {
-					[valueString appendString:[mySQLConnection escapeAndQuoteString:cellData]];
+					[valueString appendString:[postgresConnection escapeAndQuoteString:cellData]];
 				}
 			}
 		}

@@ -363,7 +363,7 @@ static inline NSPoint SPPointOnLine(NSPoint a, NSPoint b, CGFloat t) { return NS
 
 	}
 
-	if(!isDictMode && [mySQLConnection isConnected])
+	if(!isDictMode && [postgresConnection isConnected])
 	{
 		// Add structural db/table/field data to completions list or fallback to gathering SPTablesList data
 
@@ -569,7 +569,9 @@ static inline NSPoint SPPointOnLine(NSPoint a, NSPoint b, CGFloat t) { return NS
 					[possibleCompletions addObject:[NSDictionary dictionaryWithObjectsAndKeys:obj, @"display", @"field-small-square", @"image", @"", @"isRef", nil]];
 
 			// Add proc/func only for MySQL version 5 or higher
-			if(mySQLmajorVersion > 4) {
+			// TODO: This doesn't make sense, just here to shut xcode up
+			// TODO: Make up for real code
+			if(postgresMajorVersion > 4) {
 				// Add all procedures to completions list for currently selected table
 				for (id obj in [tablesListInstance allProcedureNames])
 					[possibleCompletions addObject:[NSDictionary dictionaryWithObjectsAndKeys:obj, @"display", @"proc-small", @"image", @"", @"isRef", nil]];

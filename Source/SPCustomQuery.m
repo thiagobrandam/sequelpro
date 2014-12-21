@@ -64,6 +64,7 @@
 
 #import <pthread.h>
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 @interface SPCustomQuery (PrivateAPI)
 
@@ -633,7 +634,7 @@
 	}
 
 	// Disable automatic query retries on failure for the custom queries
-	[mySQLConnection setRetryQueriesOnConnectionFailure:NO];
+	[postgresConnection setRetryQueriesOnConnectionFailure:NO];
 
 	NSUInteger queryCount = [queries count];
 	NSMutableArray *tempQueries = [NSMutableArray arrayWithCapacity:queryCount];
@@ -664,13 +665,13 @@
 		[tempQueries addObject:query];
 
 		// Run the query, timing execution (note this also includes network and overhead)
-		resultStore = [[mySQLConnection resultStoreFromQueryString:query] retain];
+		resultStore = [[postgresConnection resultStoreFromQueryString:query] retain];
 		executionTime += [resultStore queryExecutionTime];
 		totalQueriesRun++;
 
 		// If this is the last query, retrieve and store the result; otherwise,
 		// discard the result without fully loading.
-		if (totalQueriesRun == queryCount || [mySQLConnection lastQueryWasCancelled]) {
+		if (totalQueriesRun == queryCount || [postgresConnection lastQueryWasCancelled]) {
 
 			// Retrieve and cache the column definitions for the result array
 			if (cqColumnDefinition) [cqColumnDefinition release];
@@ -693,7 +694,7 @@
 			}
 
 			// Init copyTable with necessary information for copying selected rows as SQL INSERT
-			[customQueryView setTableInstance:self withTableData:resultData withColumns:cqColumnDefinition withTableName:resultTableName withConnection:mySQLConnection];
+			[customQueryView setTableInstance:self withTableData:resultData withColumns:cqColumnDefinition withTableName:resultTableName withConnection:postgresConnection];
 
 			[self updateResultStore:resultStore];
 		} else {
@@ -701,28 +702,28 @@
 		}
 
 		// Record any affected rows
-		if ( [mySQLConnection rowsAffectedByLastQuery] != (unsigned long long)~0 )
-			totalAffectedRows += (NSUInteger)[mySQLConnection rowsAffectedByLastQuery];
+		if ( [postgresConnection rowsAffectedByLastQuery] != (unsigned long long)~0 )
+			totalAffectedRows += (NSUInteger)[postgresConnection rowsAffectedByLastQuery];
 		else if ( [resultStore numberOfRows] )
 			totalAffectedRows += (NSUInteger)[resultStore numberOfRows];
 
 		[resultStore release];
 
 		// Store any error messages
-		if ([mySQLConnection queryErrored] || [mySQLConnection lastQueryWasCancelled]) {
+		if ([postgresConnection queryErrored] || [postgresConnection lastQueryWasCancelled]) {
 
 			NSString *errorString;
-			if ([mySQLConnection lastQueryWasCancelled]) {
-				if ([mySQLConnection lastQueryWasCancelledUsingReconnect])
+			if ([postgresConnection lastQueryWasCancelled]) {
+				if ([postgresConnection lastQueryWasCancelledUsingReconnect])
 					errorString = NSLocalizedString(@"Query cancelled.  Please note that to cancel the query the connection had to be reset; transactions and connection variables were reset.", @"Query cancel by resetting connection error");
 				else
 					errorString = NSLocalizedString(@"Query cancelled.", @"Query cancelled error");
 			} else {
-				errorString = [mySQLConnection lastErrorMessage];
+				errorString = [postgresConnection lastErrorMessage];
 
 				// If dealing with a "MySQL server has gone away" error, explain the situation.
 				// Error 2006 is CR_SERVER_GONE_ERROR, which means the query write couldn't complete.
-				if ([mySQLConnection lastErrorID] == 2006) {
+				if ([postgresConnection lastErrorID] == 2006) {
 					errorString = [NSString stringWithFormat:@"%@.\n\n%@", errorString, NSLocalizedString(@"(This usually indicates that the connection has been closed by the server after inactivity, but can also occur due to other conditions.  The connection has been restored; please try again if the query is safe to re-run.)", @"Explanation for MySQL server has gone away error")];
 				}
 			}
@@ -742,7 +743,7 @@
 					[[errorText onMainThread] setString:errors];
 
 					// ask the user to continue after detecting an error
-					if (![mySQLConnection lastQueryWasCancelled]) {
+					if (![postgresConnection lastQueryWasCancelled]) {
 
 						[tableDocumentInstance setTaskIndicatorShouldAnimate:NO];
 						[SPAlertSheets beginWaitingAlertSheetWithTitle:@"title"
@@ -755,7 +756,7 @@
 						                                didEndSelector:@selector(sheetDidEnd:returnCode:contextInfo:)
 						                                   contextInfo:@"runAllContinueStopSheet"
 						                                           msg:NSLocalizedString(@"MySQL Error", @"mysql error message")
-						                                      infoText:[mySQLConnection lastErrorMessage]
+						                                      infoText:[postgresConnection lastErrorMessage]
 						                                    returnCode:&runAllContinueStopSheetReturnCode];
 
 						[tableDocumentInstance setTaskIndicatorShouldAnimate:YES];
@@ -788,7 +789,7 @@
 				databaseWasChanged = YES;
 		}
 		// If the query was cancelled, end all queries.
-		if ([mySQLConnection lastQueryWasCancelled]) break;
+		if ([postgresConnection lastQueryWasCancelled]) break;
 	}
 
 	// Reload table list if at least one query began with drop, alter, rename, or create
@@ -816,9 +817,9 @@
 
 	// Perform empty query if no query is given
 	if ( !queryCount ) {
-		resultStore = [mySQLConnection resultStoreFromQueryString:@""];
+		resultStore = [postgresConnection resultStoreFromQueryString:@""];
 		[resultStore cancelResultLoad];
-		[errors setString:[mySQLConnection lastErrorMessage]];
+		[errors setString:[postgresConnection lastErrorMessage]];
 	}
 
 #ifndef SP_CODA
@@ -837,7 +838,7 @@
 	// Set up the status string
 	NSString *statusString = nil;
 	NSString *statusErrorString = [errors length]?NSLocalizedString(@"Errors", @"Errors title"):NSLocalizedString(@"No errors", @"No errors title");
-	if ( [mySQLConnection lastQueryWasCancelled] ) {
+	if ( [postgresConnection lastQueryWasCancelled] ) {
 		if (totalQueriesRun > 1) {
 			statusString = [NSString stringWithFormat:NSLocalizedString(@"%@; Cancelled in query %ld, after %@", @"text showing multiple queries were cancelled"),
 								statusErrorString,
@@ -883,7 +884,7 @@
 	[[affectedRowsText onMainThread] setStringValue:statusString];
 
 	// Restore automatic query retries
-	[mySQLConnection setRetryQueriesOnConnectionFailure:YES];
+	[postgresConnection setRetryQueriesOnConnectionFailure:YES];
 
 #ifndef SP_CODA /* [tableDocumentInstance setQueryMode:] */
 	[tableDocumentInstance setQueryMode:SPInterfaceQueryMode];
@@ -1292,7 +1293,7 @@
 	NSInteger firstErrorOccuredInQuery = [[errorDetails objectForKey:@"firstErrorQueryNumber"] integerValue];
 
 	// If errors occur, display them
-	if ( [mySQLConnection lastQueryWasCancelled] || ([errorsString length] && !queryIsTableSorter)) {
+	if ( [postgresConnection lastQueryWasCancelled] || ([errorsString length] && !queryIsTableSorter)) {
 
 #ifndef SP_CODA
 		// set the error text
@@ -1306,7 +1307,7 @@
 		NSRange errorLineNumberRange = [errorsString rangeOfRegex:@"([0-9]+)[^0-9]*$" options:RKLNoOptions inRange:NSMakeRange(0, [errorsString length]) capture:1L error:nil];
 
 		// if error ID 1064 and a line number was found
-		if([mySQLConnection lastErrorID] == 1064 && errorLineNumberRange.length)
+		if([postgresConnection lastErrorID] == 1064 && errorLineNumberRange.length)
 		{
 			// Get the line number
 			NSUInteger errorAtLine = [[errorsString substringWithRange:errorLineNumberRange] integerValue];
@@ -1594,9 +1595,9 @@
 /**
  * Sets the connection (received from SPDatabaseDocument) and makes things that have to be done only once
  */
-- (void)setConnection:(SPMySQLConnection *)theConnection
+- (void)setConnection:(PGPostgresConnection *)theConnection
 {
-	mySQLConnection = theConnection;
+	postgresConnection = theConnection;
 	currentQueryRanges = nil;
 
 	// Set up the interface
@@ -1830,12 +1831,12 @@
 	[tableDocumentInstance startTaskWithDescription:NSLocalizedString(@"Checking field data for editing...", @"checking field data for editing task description")];
 
 	// Actual check whether field can be identified bijectively 
-	SPMySQLResult *tempResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
+	PGPostgresResult *tempResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
 		[[columnDefinition objectForKey:@"db"] backtickQuotedString],
 		[tableForColumn backtickQuotedString],
 		fieldIDQueryStr]];
 
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		[tableDocumentInstance endTask];
 		return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 	}
@@ -1850,12 +1851,12 @@
 			return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 		}
 
-		tempResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
+		tempResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
 			[[columnDefinition objectForKey:@"db"] backtickQuotedString],
 			[tableForColumn backtickQuotedString],
 			fieldIDQueryStr]];
 
-		if ([mySQLConnection queryErrored]) {
+		if ([postgresConnection queryErrored]) {
 			[tableDocumentInstance endTask];
 			return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 		}
@@ -1897,7 +1898,7 @@
 	dataRow = [resultData rowContentsAtIndex:rowIndex];
 
 	// Get the primary key if there is one, using any columns present within it
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@.%@",
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@.%@",
 		[database backtickQuotedString], [tableForColumn backtickQuotedString]]];
 	[theResult setReturnDataAsStrings:YES];
 	NSMutableArray *primaryColumnsInSpecifiedTable = [NSMutableArray array];
@@ -1937,14 +1938,14 @@
 				[argumentParts addObject:[NSString stringWithFormat:@"%@=b'%@'", [[field objectForKey:@"org_name"] backtickQuotedString], [aValue description]]];
 			}
 			else if ([fieldTypeGrouping isEqualToString:@"geometry"]) {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteData:[aValue data]]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteData:[aValue data]]]];
 			}
 			// BLOB/TEXT data
 			else if ([aValue isKindOfClass:[NSData class]]) {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteData:aValue]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteData:aValue]]];
 			}
 			else {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteString:aValue]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteString:aValue]]];
 			}
 		}
 	}
@@ -1982,11 +1983,11 @@
 
 		NSString *newObject = nil;
 		if ( [anObject isKindOfClass:[NSCalendarDate class]] ) {
-			newObject = [mySQLConnection escapeAndQuoteString:[anObject description]];
+			newObject = [postgresConnection escapeAndQuoteString:[anObject description]];
 		} else if ( [anObject isKindOfClass:[NSNumber class]] ) {
 			newObject = [anObject stringValue];
 		} else if ( [anObject isKindOfClass:[NSData class]] ) {
-			newObject = [mySQLConnection escapeAndQuoteData:anObject];
+			newObject = [postgresConnection escapeAndQuoteData:anObject];
 		} else {
 			if ( [[anObject description] isEqualToString:@"CURRENT_TIMESTAMP"] ) {
 				newObject = @"CURRENT_TIMESTAMP";
@@ -2003,25 +2004,25 @@
 						&& [[anObject description] isEqualToString:@"NOW()"]) {
 				newObject = @"NOW()";
 			} else {
-				newObject = [mySQLConnection escapeAndQuoteString:[anObject description]];
+				newObject = [postgresConnection escapeAndQuoteString:[anObject description]];
 			}
 		}
 
-		[mySQLConnection queryString:
+		[postgresConnection execute:
 			[NSString stringWithFormat:@"UPDATE %@.%@ SET %@.%@.%@ = %@ %@ LIMIT 1",
 				[[columnDefinition objectForKey:@"db"] backtickQuotedString], [[columnDefinition objectForKey:@"org_table"] backtickQuotedString],
 				[[columnDefinition objectForKey:@"db"] backtickQuotedString], [[columnDefinition objectForKey:@"org_table"] backtickQuotedString], [columnName backtickQuotedString], newObject, fieldIDQueryString]];
 
 		// Check for errors while UPDATE
-		if ([mySQLConnection queryErrored]) {
+		if ([postgresConnection queryErrored]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), NSLocalizedString(@"Cancel", @"cancel button"), nil, [tableDocumentInstance parentWindow], self, nil, nil,
-							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't write field.\nMySQL said: %@", @"message of panel when error while updating field to db"), [mySQLConnection lastErrorMessage]]);
+							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't write field.\nMySQL said: %@", @"message of panel when error while updating field to db"), [postgresConnection lastErrorMessage]]);
 
 			return;
 		}
 
 		// This shouldn't happen – for safety reasons
-		if ( ![mySQLConnection rowsAffectedByLastQuery] ) {
+		if ( ![postgresConnection rowsAffectedByLastQuery] ) {
 #ifndef SP_CODA
 			if ( [prefs boolForKey:SPShowNoAffectedRowsError] ) {
 				SPBeginAlertSheet(NSLocalizedString(@"Warning", @"warning"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
@@ -2271,7 +2272,7 @@
 {
 	queryIsTableSorter = NO;
 
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		sortColumn = nil;
 		if(sortField) [sortField release], sortField = nil;
 		return;
@@ -2499,7 +2500,7 @@
 
 			[fieldEditor editWithObject:originalData
 							fieldName:[columnDefinition objectForKey:@"name"]
-							usingEncoding:[mySQLConnection stringEncoding] 
+							usingEncoding:[postgresConnection stringEncoding] 
 							isObjectBlob:isBlob 
 							isEditable:isFieldEditable 
 							withWindow:[tableDocumentInstance parentWindow]
@@ -2864,7 +2865,7 @@
 	if(![helpWebViewWindow isVisible])
 	{
 		// set title of the Help window
-		[helpWebViewWindow setTitle:[NSString stringWithFormat:@"%@ (%@ %@)", NSLocalizedString(@"MySQL Help", @"mysql help"), NSLocalizedString(@"version", @"version"), mySQLversion]];
+		[helpWebViewWindow setTitle:[NSString stringWithFormat:@"%@ (%@ %@)", NSLocalizedString(@"MySQL Help", @"mysql help"), NSLocalizedString(@"version", @"version"), postgresVersion]];
 
 		// init goback/forward buttons
 		if([[helpWebView backForwardList] backListCount] < 1)
@@ -3078,13 +3079,14 @@
 	}
 }
 
+// TODO: we should replace this method with a real one for Postgres online DOCs
 - (void)openMySQLonlineDocumentationWithString:(NSString *)searchString
 {
 	NSString *version = nil;
-	if([[mySQLversion stringByReplacingOccurrencesOfString:@"." withString:@""] integerValue] < 42)
+	if([[postgresVersion stringByReplacingOccurrencesOfString:@"." withString:@""] integerValue] < 42)
 		version = @"4.1";
 	else
-		version = [NSString stringWithString:mySQLversion];
+		version = [NSString stringWithString:postgresVersion];
 
 	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:
 		[[NSString stringWithFormat:
@@ -3108,15 +3110,15 @@
 	if ([searchString isEqualToString:@"%"]) searchString = @"\\%";
 
 	NSRange         aRange;
-	SPMySQLResult   *theResult = nil;
+	PGPostgresResult   *theResult = nil;
 	NSDictionary    *tableDetails;
 	NSMutableString *theHelp = [NSMutableString string];
 
 	[theHelp setString:@""];
 
 	// search via: HELP 'searchString'
-	theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"HELP '%@'", [searchString stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"]]];
-	if ([mySQLConnection queryErrored])
+	theResult = [postgresConnection execute:[NSString stringWithFormat:@"HELP '%@'", [searchString stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"]]];
+	if ([postgresConnection queryErrored])
 	{
 		// if an error or HELP is not supported fall back to online search but
 		// don't open it if autoHelp is enabled
@@ -3131,7 +3133,7 @@
 	if(![theResult numberOfRows]) {
 
 		// try to search via: HELP 'searchString%'
-		theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"HELP '%@%%'", [searchString stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"]]];
+		theResult = [postgresConnection execute:[NSString stringWithFormat:@"HELP '%@%%'", [searchString stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"]]];
 
 		// really nothing found?
 		if(![theResult numberOfRows])
@@ -3361,7 +3363,7 @@
 - (void)historyItemsHaveBeenUpdated:(id)manager
 {
 	// Abort if the connection has been closed already - sign of a closed window
-	if (![mySQLConnection isConnected]) return;
+	if (![postgresConnection isConnected]) return;
 
 	// Refresh history popup menu
 	NSMenu* historyMenu = [queryHistoryButton menu];
@@ -4026,7 +4028,7 @@
 		return preserveNULLs ? value : [prefs objectForKey:SPNullValue];
 
 	if ([value isKindOfClass:[NSData class]]) {
-		return [value stringRepresentationUsingEncoding:[mySQLConnection stringEncoding]];
+		return [value stringRepresentationUsingEncoding:[postgresConnection stringEncoding]];
 	}
 
 	return value;
@@ -4054,7 +4056,7 @@
 #ifndef SP_CODA
 	if (helpHTMLTemplate) [helpHTMLTemplate release];
 #endif
-	if (mySQLversion) [mySQLversion release];
+	if (postgresVersion) [postgresVersion release];
 	if (sortField) [sortField release];
 	if (cqColumnDefinition) [cqColumnDefinition release];
 	if (selectionIndexToRestore) [selectionIndexToRestore release];

@@ -65,6 +65,7 @@
 
 #import <pthread.h>
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 #ifndef SP_CODA
 static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOperator";
@@ -861,14 +862,14 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	// Perform and process the query
 	[tableContentView performSelectorOnMainThread:@selector(noteNumberOfRowsChanged) withObject:nil waitUntilDone:YES];
 	[self setUsedQuery:queryString];
-	resultStore = [[mySQLConnection resultStoreFromQueryString:queryString] retain];
+	resultStore = [[postgresConnection resultStoreFromQueryString:queryString] retain];
 
 	// Ensure the number of columns are unchanged; if the column count has changed, abort the load
 	// and queue a full table reload.
 	BOOL fullTableReloadRequired = NO;
 	if (resultStore && [dataColumns count] != [resultStore numberOfFields]) {
 		[tableDocumentInstance disableTaskCancellation];
-		[mySQLConnection cancelCurrentQuery];
+		[postgresConnection cancelCurrentQuery];
 		[resultStore cancelResultLoad];
 		fullTableReloadRequired = YES;
 	}
@@ -880,19 +881,19 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	if (resultStore) [resultStore release];
 
 	// If the result is empty, and a late page is selected, reset the page
-	if (!fullTableReloadRequired && [prefs boolForKey:SPLimitResults] && queryStringBeforeLimit && !tableRowsCount && ![mySQLConnection lastQueryWasCancelled]) {
+	if (!fullTableReloadRequired && [prefs boolForKey:SPLimitResults] && queryStringBeforeLimit && !tableRowsCount && ![postgresConnection lastQueryWasCancelled]) {
 		contentPage = 1;
 		previousTableRowsCount = tableRowsCount;
 		queryString = [NSMutableString stringWithFormat:@"%@ LIMIT 0,%ld", queryStringBeforeLimit, (long)[prefs integerForKey:SPLimitResultsValue]];
 		[self setUsedQuery:queryString];
-		resultStore = [[mySQLConnection resultStoreFromQueryString:queryString] retain];
+		resultStore = [[postgresConnection resultStoreFromQueryString:queryString] retain];
 		if (resultStore) {
 			[self updateResultStore:resultStore approximateRowCount:[prefs integerForKey:SPLimitResultsValue]];
 			[resultStore release];
 		}
 	}
 
-	if ([mySQLConnection lastQueryWasCancelled] || [mySQLConnection queryErrored])
+	if ([postgresConnection lastQueryWasCancelled] || [postgresConnection queryErrored])
 		isInterruptedLoad = YES;
 	else
 		isInterruptedLoad = NO;
@@ -987,18 +988,18 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 
 	// Notify listenters that the query has finished
-	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryHasBeenPerformed" object:tableDocumentInstance];
+	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SPostgreSQLQueryHasBeenPerformed" object:tableDocumentInstance];
 
-	if ([mySQLConnection queryErrored] && ![mySQLConnection lastQueryWasCancelled]) {
+	if ([postgresConnection queryErrored] && ![postgresConnection lastQueryWasCancelled]) {
 #ifndef SP_CODA
 		if(activeFilter == 0) {
 #endif
 			if(filterString)
 				SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-							  [NSString stringWithFormat:NSLocalizedString(@"The table data couldn't be loaded presumably due to used filter clause. \n\nMySQL said: %@", @"message of panel when loading of table failed and presumably due to used filter argument"), [mySQLConnection lastErrorMessage]]);
+							  [NSString stringWithFormat:NSLocalizedString(@"The table data couldn't be loaded presumably due to used filter clause. \n\nMySQL said: %@", @"message of panel when loading of table failed and presumably due to used filter argument"), [postgresConnection lastErrorMessage]]);
 			else
 				SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-							  [NSString stringWithFormat:NSLocalizedString(@"The table data couldn't be loaded.\n\nMySQL said: %@", @"message of panel when loading of table failed"), [mySQLConnection lastErrorMessage]]);
+							  [NSString stringWithFormat:NSLocalizedString(@"The table data couldn't be loaded.\n\nMySQL said: %@", @"message of panel when loading of table failed"), [postgresConnection lastErrorMessage]]);
 		}
 #ifndef SP_CODA
 		// Filter task came from filter table
@@ -1728,9 +1729,9 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	[[tableContentView onMainThread] selectRowIndexes:[NSIndexSet indexSet] byExtendingSelection:NO];
 	[self loadTableValues];
 	
-	if ([mySQLConnection queryErrored] && ![mySQLConnection lastQueryWasCancelled]) {
+	if ([postgresConnection queryErrored] && ![postgresConnection lastQueryWasCancelled]) {
 		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-						  [NSString stringWithFormat:NSLocalizedString(@"Couldn't sort table. MySQL said: %@", @"message of panel when sorting of table failed"), [mySQLConnection lastErrorMessage]]);
+						  [NSString stringWithFormat:NSLocalizedString(@"Couldn't sort table. MySQL said: %@", @"message of panel when sorting of table failed"), [postgresConnection lastErrorMessage]]);
 		
 		[tableDocumentInstance endTask];
 		[sortPool drain];
@@ -1900,7 +1901,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	dataRow = [tableValues rowContentsAtIndex:rowIndex];
 
 	// Get the primary key if there is one, using any columns present within it
-	SPMySQLResult *theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@.%@",
+	PGPostgresResult *theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@.%@",
 		[database backtickQuotedString], [tableForColumn backtickQuotedString]]];
 	[theResult setReturnDataAsStrings:YES];
 	NSMutableArray *primaryColumnsInSpecifiedTable = [NSMutableArray array];
@@ -1940,14 +1941,14 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				[argumentParts addObject:[NSString stringWithFormat:@"%@=b'%@'", [[field objectForKey:@"org_name"] backtickQuotedString], [aValue description]]];
 			}
 			else if ([fieldTypeGrouping isEqualToString:@"geometry"]) {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteData:[aValue data]]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteData:[aValue data]]]];
 			}
 			// BLOB/TEXT data
 			else if ([aValue isKindOfClass:[NSData class]]) {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteData:aValue]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteData:aValue]]];
 			}
 			else {
-				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [mySQLConnection escapeAndQuoteString:aValue]]];
+				[argumentParts addObject:[NSString stringWithFormat:@"%@=%@", [[field objectForKey:@"org_name"] backtickQuotedString], [postgresConnection escapeAndQuoteString:aValue]]];
 			}
 		}
 	}
@@ -2040,13 +2041,13 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 		}
 		
 		// If we have indexes, use argumentForRow
-		queryResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT * FROM %@ WHERE %@", [selectedTable backtickQuotedString], [self argumentForRow:[tableContentView selectedRow]]]];
+		queryResult = [postgresConnection queryString:[NSString stringWithFormat:@"SELECT * FROM %@ WHERE %@", [selectedTable backtickQuotedString], [self argumentForRow:[tableContentView selectedRow]]]];
 		dbDataRow = [queryResult getRowAsArray];
 	}
 #endif
 
 	// Set autoincrement fields to NULL
-	queryResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
+	queryResult = [postgresConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
 	
 	[queryResult setReturnDataAsStrings:YES];
 	
@@ -2180,8 +2181,8 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 			// consistent state if deletion fails.
 			if (isEditingRow) [self cancelRowEditing];
 
-			[mySQLConnection queryString:[NSString stringWithFormat:@"DELETE FROM %@", [selectedTable backtickQuotedString]]];
-			if ( ![mySQLConnection queryErrored] ) {
+			[postgresConnection queryString:[NSString stringWithFormat:@"DELETE FROM %@", [selectedTable backtickQuotedString]]];
+			if ( ![postgresConnection queryErrored] ) {
 				maxNumRows = 0;
 				tableRowsCount = 0;
 				maxNumRowsIsEstimate = NO;
@@ -2205,7 +2206,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				[self performSelector:@selector(showErrorSheetWith:)
 					withObject:[NSArray arrayWithObjects:NSLocalizedString(@"Error", @"error"),
 						[NSString stringWithFormat:NSLocalizedString(@"Couldn't delete rows.\n\nMySQL said: %@", @"message when deleteing all rows failed"),
-						   [mySQLConnection lastErrorMessage]],
+						   [postgresConnection lastErrorMessage]],
 						nil]
 					afterDelay:0.3];
 			}
@@ -2256,15 +2257,15 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				NSInteger numberOfRows = 0;
 
 				// Get the number of rows in the table
-				NSString *returnedCount = [mySQLConnection getFirstFieldFromQuery:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [selectedTable backtickQuotedString]]];
+				NSString *returnedCount = [postgresConnection getFirstFieldFromQuery:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@", [selectedTable backtickQuotedString]]];
 				if (returnedCount) {
 					numberOfRows = [returnedCount integerValue];
 				}
 
 				// Check for uniqueness via LIMIT numberOfRows-1,numberOfRows for speed
 				if(numberOfRows > 0) {
-					[mySQLConnection queryString:[NSString stringWithFormat:@"SELECT * FROM %@ GROUP BY %@ LIMIT %ld,%ld", [selectedTable backtickQuotedString], [primaryKeyFieldNames componentsJoinedAndBacktickQuoted], (long)(numberOfRows-1), (long)numberOfRows]];
-					if ([mySQLConnection rowsAffectedByLastQuery] == 0)
+					[postgresConnection queryString:[NSString stringWithFormat:@"SELECT * FROM %@ GROUP BY %@ LIMIT %ld,%ld", [selectedTable backtickQuotedString], [primaryKeyFieldNames componentsJoinedAndBacktickQuoted], (long)(numberOfRows-1), (long)numberOfRows]];
+					if ([postgresConnection rowsAffectedByLastQuery] == 0)
 						primaryKeyFieldNames = nil;
 				} else {
 					primaryKeyFieldNames = nil;
@@ -2279,10 +2280,10 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 					//argumentForRow might return empty query, in which case we shouldn't execute the partial query
 					if([wherePart length]) {
-						[mySQLConnection queryString:[NSString stringWithFormat:@"DELETE FROM %@ WHERE %@", [selectedTable backtickQuotedString], wherePart]];
+						[postgresConnection queryString:[NSString stringWithFormat:@"DELETE FROM %@ WHERE %@", [selectedTable backtickQuotedString], wherePart]];
 
 						// Check for errors
-						if ( ![mySQLConnection rowsAffectedByLastQuery] || [mySQLConnection queryErrored]) {
+						if ( ![postgresConnection rowsAffectedByLastQuery] || [postgresConnection queryErrored]) {
 							// If error delete that index from selectedRows for reloading table if
 							// "ReloadAfterRemovingRow" is disbaled
 							if(!reloadAfterRemovingRow)
@@ -2310,17 +2311,17 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 					id keyValue = [tableValues cellDataAtRow:anIndex column:[[[tableDataInstance columnWithName:NSArrayObjectAtIndex(primaryKeyFieldNames,0)] objectForKey:@"datacolumnindex"] integerValue]];
 
 					if([keyValue isKindOfClass:[NSData class]])
-						[deleteQuery appendString:[mySQLConnection escapeAndQuoteData:keyValue]];
+						[deleteQuery appendString:[postgresConnection escapeAndQuoteData:keyValue]];
 					else
-						[deleteQuery appendString:[mySQLConnection escapeAndQuoteString:[keyValue description]]];
+						[deleteQuery appendString:[postgresConnection escapeAndQuoteString:[keyValue description]]];
 
 					// Split deletion query into 256k chunks
 					if([deleteQuery length] > 256000) {
 						[deleteQuery appendString:@")"];
-						[mySQLConnection queryString:deleteQuery];
+						[postgresConnection queryString:deleteQuery];
 
 						// Remember affected rows for error checking
-						affectedRows += (NSInteger)[mySQLConnection rowsAffectedByLastQuery];
+						affectedRows += (NSInteger)[postgresConnection rowsAffectedByLastQuery];
 
 						// Reinit a new deletion query
 						[deleteQuery setString:[NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ IN (", [selectedTable backtickQuotedString], [NSArrayObjectAtIndex(primaryKeyFieldNames,0) backtickQuotedString]]];
@@ -2336,10 +2337,10 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				if(![deleteQuery hasSuffix:@"("]) {
 					// Replace final , by ) and delete the remaining rows
 					[deleteQuery setString:[NSString stringWithFormat:@"%@)", [deleteQuery substringToIndex:([deleteQuery length]-1)]]];
-					[mySQLConnection queryString:deleteQuery];
+					[postgresConnection queryString:deleteQuery];
 
 					// Remember affected rows for error checking
-					affectedRows += (NSInteger)[mySQLConnection rowsAffectedByLastQuery];
+					affectedRows += (NSInteger)[postgresConnection rowsAffectedByLastQuery];
 				}
 
 				errors = (affectedRows > 0) ? [selectedRows count] - affectedRows : [selectedRows count];
@@ -2360,10 +2361,10 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 					// Split deletion query into 64k chunks
 					if([deleteQuery length] > 64000) {
-						[mySQLConnection queryString:deleteQuery];
+						[postgresConnection queryString:deleteQuery];
 
 						// Remember affected rows for error checking
-						affectedRows += (NSInteger)[mySQLConnection rowsAffectedByLastQuery];
+						affectedRows += (NSInteger)[postgresConnection rowsAffectedByLastQuery];
 
 						// Reinit a new deletion query
 						[deleteQuery setString:[NSString stringWithFormat:@"DELETE FROM %@ WHERE ", [selectedTable backtickQuotedString]]];
@@ -2380,10 +2381,10 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 					// Remove final ' OR ' and delete the remaining rows
 					[deleteQuery setString:[deleteQuery substringToIndex:([deleteQuery length]-4)]];
-					[mySQLConnection queryString:deleteQuery];
+					[postgresConnection queryString:deleteQuery];
 
 					// Remember affected rows for error checking
-					affectedRows += (NSInteger)[mySQLConnection rowsAffectedByLastQuery];
+					affectedRows += (NSInteger)[postgresConnection rowsAffectedByLastQuery];
 				}
 
 				errors = (affectedRows > 0) ? [selectedRows count] - affectedRows : [selectedRows count];
@@ -2580,7 +2581,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 						[[image TIFFRepresentationUsingCompression:NSTIFFCompressionJPEG factor:0.01f] base64Encoding]]];
 				} 
 				else {
-					[tempRow addObject:hide ? @"&lt;BLOB&gt;" : [o stringRepresentationUsingEncoding:[mySQLConnection stringEncoding]]];
+					[tempRow addObject:hide ? @"&lt;BLOB&gt;" : [o stringRepresentationUsingEncoding:[postgresConnection stringEncoding]]];
 				}
 				
 				if(image) [image release];
@@ -2933,13 +2934,13 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 			// I believe these class matches are not ever met at present.
 			if ([rowObject isKindOfClass:[NSCalendarDate class]]) {
-				fieldValue = [mySQLConnection escapeAndQuoteString:[rowObject description]];
+				fieldValue = [postgresConnection escapeAndQuoteString:[rowObject description]];
 			} else if ([rowObject isKindOfClass:[NSNumber class]]) {
 				fieldValue = [rowObject stringValue];
 
 			// Convert data to its hex representation
 			} else if ([rowObject isKindOfClass:[NSData class]]) {
-				fieldValue = [mySQLConnection escapeAndQuoteData:rowObject];
+				fieldValue = [postgresConnection escapeAndQuoteData:rowObject];
 
 			} else {
 				if ([[rowObject description] isEqualToString:@"CURRENT_TIMESTAMP"]) {
@@ -2949,7 +2950,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				} else if ([fieldTypeGroup isEqualToString:@"date"] && [[rowObject description] isEqualToString:@"NOW()"]) {
 					fieldValue = @"NOW()";
 				} else {
-					fieldValue = [mySQLConnection escapeAndQuoteString:[rowObject description]];
+					fieldValue = [postgresConnection escapeAndQuoteString:[rowObject description]];
 				}
 			}
 		}
@@ -2984,12 +2985,12 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	[rowValuesToSave release];
 
 	// Run the query
-	[mySQLConnection queryString:queryString];
+	[postgresConnection queryString:queryString];
 
 	[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryHasBeenPerformed" object:tableDocumentInstance];
 
 	// If no rows have been changed, show error if appropriate.
-	if ( ![mySQLConnection rowsAffectedByLastQuery] && ![mySQLConnection queryErrored] ) {
+	if ( ![postgresConnection rowsAffectedByLastQuery] && ![postgresConnection queryErrored] ) {
 #ifndef SP_CODA
 		if ( [prefs boolForKey:SPShowNoAffectedRowsError] ) {
 			SPBeginAlertSheet(NSLocalizedString(@"Warning", @"warning"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
@@ -3019,7 +3020,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 		return YES;
 
 	// On success...
-	} else if ( ![mySQLConnection queryErrored] ) {
+	} else if ( ![postgresConnection queryErrored] ) {
 		isEditingRow = NO;
 
 		// New row created successfully
@@ -3041,7 +3042,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 				// Set the insertId for fields with auto_increment
 				for ( i = 0; i < [dataColumns count] ; i++ ) {
 					if ([[NSArrayObjectAtIndex(dataColumns, i) objectForKey:@"autoincrement"] integerValue]) {
-						[tableValues replaceObjectInRow:currentlyEditingRow column:i withObject:[[NSNumber numberWithUnsignedLongLong:[mySQLConnection lastInsertID]] description]];
+						[tableValues replaceObjectInRow:currentlyEditingRow column:i withObject:[[NSNumber numberWithUnsignedLongLong:[postgresConnection lastInsertID]] description]];
 					}
 				}
 #ifndef SP_CODA
@@ -3075,7 +3076,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	} 
 	else {
 		SPBeginAlertSheet(NSLocalizedString(@"Unable to write row", @"Unable to write row error"), NSLocalizedString(@"Edit row", @"Edit row button"), NSLocalizedString(@"Discard changes", @"discard changes button"), nil, [tableDocumentInstance parentWindow], self, @selector(addRowErrorSheetDidEnd:returnCode:contextInfo:), nil,
-						  [NSString stringWithFormat:NSLocalizedString(@"MySQL said:\n\n%@", @"message of panel when error while adding row to db"), [mySQLConnection lastErrorMessage]]);
+						  [NSString stringWithFormat:NSLocalizedString(@"MySQL said:\n\n%@", @"message of panel when error while adding row to db"), [postgresConnection lastErrorMessage]]);
 		return NO;
 	}
 }
@@ -3199,7 +3200,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	if ( !keys ) {
 		setLimit = NO;
 		keys = [[NSMutableArray alloc] init];
-		theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
+		theResult = [postgresConnection queryString:[NSString stringWithFormat:@"SHOW COLUMNS FROM %@", [selectedTable backtickQuotedString]]];
 		[theResult setReturnDataAsStrings:YES];
 		for (NSDictionary *eachRow in theResult) {
 			if ( [[eachRow objectForKey:@"Key"] isEqualToString:@"PRI"] ) {
@@ -3251,17 +3252,17 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 		else {
 			// If the field is of type BIT then it needs a binary prefix
 			if ([[[tableDataInstance columnWithName:NSArrayObjectAtIndex(keys, i)] objectForKey:@"type"] isEqualToString:@"BIT"]) {
-				[value setString:[NSString stringWithFormat:@"b'%@'", [mySQLConnection escapeString:tempValue includingQuotes:NO]]];
+				[value setString:[NSString stringWithFormat:@"b'%@'", [postgresConnection escapeString:tempValue includingQuotes:NO]]];
 			}
 			else if ([tempValue isKindOfClass:[SPMySQLGeometryData class]]) {
-				[value setString:[mySQLConnection escapeAndQuoteData:[tempValue data]]];
+				[value setString:[postgresConnection escapeAndQuoteData:[tempValue data]]];
 			}
 			// BLOB/TEXT data
 			else if ([tempValue isKindOfClass:[NSData class]]) {
-				[value setString:[mySQLConnection escapeAndQuoteData:tempValue]];
+				[value setString:[postgresConnection escapeAndQuoteData:tempValue]];
 			}
 			else
-				[value setString:[mySQLConnection escapeAndQuoteString:tempValue]];
+				[value setString:[postgresConnection escapeAndQuoteString:tempValue]];
 
 			[argument appendFormat:@"%@ = %@", [NSArrayObjectAtIndex(keys, i) backtickQuotedString], value];
 		}
@@ -3356,12 +3357,12 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 	[tableDocumentInstance startTaskWithDescription:NSLocalizedString(@"Checking field data for editing...", @"checking field data for editing task description")];
 
 	// Actual check whether field can be identified bijectively
-	SPMySQLResult *tempResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
+	PGPostgresResult *tempResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
 		[[columnDefinition objectForKey:@"db"] backtickQuotedString],
 		[tableForColumn backtickQuotedString],
 		fieldIDQueryStr]];
 
-	if ([mySQLConnection queryErrored]) {
+	if ([postgresConnection queryErrored]) {
 		[tableDocumentInstance endTask];
 		return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 	}
@@ -3376,12 +3377,12 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 			return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 		}
 
-		tempResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
+		tempResult = [postgresConnection execute:[NSString stringWithFormat:@"SELECT COUNT(1) FROM %@.%@ %@",
 			[[columnDefinition objectForKey:@"db"] backtickQuotedString],
 			[tableForColumn backtickQuotedString],
 			fieldIDQueryStr]];
 
-		if ([mySQLConnection queryErrored]) {
+		if ([postgresConnection queryErrored]) {
 			[tableDocumentInstance endTask];
 			return [NSArray arrayWithObjects:[NSNumber numberWithInteger:-1], @"", nil];
 		}
@@ -3545,11 +3546,11 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 		NSString *newObject = nil;
 		if ( [anObject isKindOfClass:[NSCalendarDate class]] ) {
-			newObject = [mySQLConnection escapeAndQuoteString:[anObject description]];
+			newObject = [postgresConnection escapeAndQuoteString:[anObject description]];
 		} else if ( [anObject isKindOfClass:[NSNumber class]] ) {
 			newObject = [anObject stringValue];
 		} else if ( [anObject isKindOfClass:[NSData class]] ) {
-			newObject = [mySQLConnection escapeAndQuoteData:anObject];
+			newObject = [postgresConnection escapeAndQuoteData:anObject];
 		} else {
 			if ( [[anObject description] isEqualToString:@"CURRENT_TIMESTAMP"] ) {
 				newObject = @"CURRENT_TIMESTAMP";
@@ -3563,20 +3564,20 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 						&& [[anObject description] isEqualToString:@"NOW()"]) {
 				newObject = @"NOW()";
 			} else {
-				newObject = [mySQLConnection escapeAndQuoteString:[anObject description]];
+				newObject = [postgresConnection escapeAndQuoteString:[anObject description]];
 			}
 		}
 
-		[mySQLConnection queryString:
+		[postgresConnection execute:
 			[NSString stringWithFormat:@"UPDATE %@.%@ SET %@.%@.%@ = %@ %@ LIMIT 1",
 				[[columnDefinition objectForKey:@"db"] backtickQuotedString], [tableForColumn backtickQuotedString],
 				[[columnDefinition objectForKey:@"db"] backtickQuotedString], [tableForColumn backtickQuotedString], [columnName backtickQuotedString], newObject, fieldIDQueryStr]];
 
 
 		// Check for errors while UPDATE
-		if ([mySQLConnection queryErrored]) {
+		if ([postgresConnection queryErrored]) {
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), NSLocalizedString(@"Cancel", @"cancel button"), nil, [tableDocumentInstance parentWindow], self, nil, nil,
-							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't write field.\nMySQL said: %@", @"message of panel when error while updating field to db"), [mySQLConnection lastErrorMessage]]);
+							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't write field.\nMySQL said: %@", @"message of panel when error while updating field to db"), [postgresConnection lastErrorMessage]]);
 
 			[tableDocumentInstance endTask];
 			[[NSNotificationCenter defaultCenter] postNotificationName:@"SMySQLQueryHasBeenPerformed" object:tableDocumentInstance];
@@ -3585,7 +3586,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 
 
 		// This shouldn't happen – for safety reasons
-		if ( ![mySQLConnection rowsAffectedByLastQuery] ) {
+		if ( ![postgresConnection rowsAffectedByLastQuery] ) {
 #ifndef SP_CODA
 			if ( [prefs boolForKey:SPShowNoAffectedRowsError] ) {
 				SPBeginAlertSheet(NSLocalizedString(@"Warning", @"warning"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
@@ -4016,7 +4017,7 @@ static NSString *SPTableFilterSetDefaultOperator = @"SPTableFilterSetDefaultOper
 		} else {
 			if ([filterSettings objectForKey:@"filterValue"] && ![[filterSettings objectForKey:@"filterValue"] isNSNull]) {
 				if ([[filterSettings objectForKey:@"filterValue"] isKindOfClass:[NSData class]]) {
-					filterValueToRestore = [[NSString alloc] initWithData:[filterSettings objectForKey:@"filterValue"] encoding:[mySQLConnection stringEncoding]];
+					filterValueToRestore = [[NSString alloc] initWithData:[filterSettings objectForKey:@"filterValue"] encoding:[postgresConnection stringEncoding]];
 				} else {
 					filterValueToRestore = [[NSString alloc] initWithString:[filterSettings objectForKey:@"filterValue"]];
 				}

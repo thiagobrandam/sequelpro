@@ -69,6 +69,7 @@
 #import "SPWindowManagement.h"
 
 #import <SPMySQL/SPMySQL.h>
+#import <PostgresKit/PostgresKit.h>
 
 // Constants
 static NSString *SPAddRow         = @"SPAddRow";
@@ -183,11 +184,11 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
  */
 - (IBAction)updateTables:(id)sender
 {
-	SPMySQLResult *theResult;
+	PGPostgresResult *theResult;
 	NSString *previousSelectedTable = nil;
 	NSString *previousFilterString = nil;
 	BOOL previousTableListIsSelectable = tableListIsSelectable;
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 
 	if (selectedTableName) previousSelectedTable = [[NSString alloc] initWithString:selectedTableName];
 #ifndef SP_CODA /* table list filtering */
@@ -217,13 +218,13 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 
 		// Use UTF8 for identifier-based queries
 		if (changeEncoding) {
-			[mySQLConnection storeEncodingForRestoration];
-			[mySQLConnection setEncoding:@"utf8"];
+			[postgresConnection storeEncodingForRestoration];
+			[postgresConnection setEncoding:@"utf8"];
 		}
 
 		// Select the table list for the current database.  On MySQL versions after 5 this will include
 		// views; on MySQL versions >= 5.0.02 select the "full" list to also select the table type column.
-		theResult = [mySQLConnection queryString:@"SHOW /*!50002 FULL*/ TABLES"];
+		theResult = [postgresConnection execute:@"SHOW /*!50002 FULL*/ TABLES"];
 		[theResult setDefaultRowReturnType:SPMySQLResultRowAsArray];
 		if ([theResult numberOfFields] == 1) {
 			for (NSArray *eachRow in theResult) {
@@ -261,12 +262,12 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 		 */
 		if ([[tableDocumentInstance serverSupport] supportsInformationSchema]) {
 			NSString *pQuery = [NSString stringWithFormat:@"SELECT * FROM information_schema.routines WHERE routine_schema = %@ ORDER BY routine_name", [[tableDocumentInstance database] tickQuotedString]];
-			theResult = [mySQLConnection queryString:pQuery];
+			theResult = [postgresConnection execute:pQuery];
 			[theResult setDefaultRowReturnType:SPMySQLResultRowAsArray];
 
 			// Check for mysql errors - if information_schema is not accessible for some reasons
 			// omit adding procedures and functions
-			if(![mySQLConnection queryErrored] && theResult != nil && [theResult numberOfRows] && [theResult numberOfFields] > 3) {
+			if(![postgresConnection queryErrored] && theResult != nil && [theResult numberOfRows] && [theResult numberOfFields] > 3) {
 
 				// Add the header row
 				[tables addObject:NSLocalizedString(@"PROCS & FUNCS",@"header for procs & funcs list")];
@@ -285,7 +286,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 #endif
 
 		// Restore encoding if appropriate
-		if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+		if (changeEncoding) [postgresConnection restoreStoredEncoding];
 
 		// Notify listeners that the query has finished
 		[[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:@"SMySQLQueryHasBeenPerformed" object:tableDocumentInstance];
@@ -1847,14 +1848,14 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 		NSString *query = [pboard stringForType:SPNavigatorTableDataPasteboardDragType];
 		if(!query) return NO;
 
-		[mySQLConnection queryString:query];
-		if ([mySQLConnection queryErrored]) {
+		[postgresConnection execute:query];
+		if ([postgresConnection queryErrored]) {
 			NSAlert *alert = [NSAlert alertWithMessageText:NSLocalizedString(@"Error while importing table", @"error while importing table message")
 											 defaultButton:NSLocalizedString(@"OK", @"OK button")
 										   alternateButton:nil
 											   otherButton:nil
 								 informativeTextWithFormat:NSLocalizedString(@"An error occurred while trying to import a table via: \n%@\n\n\nMySQL said: %@", @"error importing table informative message"),
-									query, [mySQLConnection lastErrorMessage]];
+									query, [postgresConnection lastErrorMessage]];
 
 			[alert setAlertStyle:NSCriticalAlertStyle];
 			[alert beginSheetModalForWindow:[tableDocumentInstance parentWindow] modalDelegate:self didEndSelector:@selector(sheetDidEnd:returnCode:contextInfo:) contextInfo:@"truncateTableError"];
@@ -2172,7 +2173,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	NSUInteger currentIndex = [indexes lastIndex];
 	
 	if ([force boolValue]) {
-		[mySQLConnection queryString:@"SET FOREIGN_KEY_CHECKS = 0"];
+		[postgresConnection execute:@"SET FOREIGN_KEY_CHECKS = 0"];
 	}
 
 	while (currentIndex != NSNotFound)
@@ -2194,10 +2195,10 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 			objectIdentifier = @"FUNCTION";
 		}
 		
-		[mySQLConnection queryString:[NSString stringWithFormat:@"DROP %@ %@", objectIdentifier, databaseObject]];
+		[postgresConnection execute:[NSString stringWithFormat:@"DROP %@ %@", objectIdentifier, databaseObject]];
 
 		// If no error is recorded, the table was successfully dropped - remove it from the list
-		if (![mySQLConnection queryErrored]) {
+		if (![postgresConnection queryErrored]) {
 			
 			// Dropped table with success
 			if (isTableListFiltered) {
@@ -2225,7 +2226,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 				[alert addButtonWithTitle:NSLocalizedString(@"Stop", @"stop button")];
 			}
 			
-			NSString *databaseError = [mySQLConnection lastErrorMessage];
+			NSString *databaseError = [postgresConnection lastErrorMessage];
 			NSString *userMessage = NSLocalizedString(@"Couldn't delete '%@'.\n\nMySQL said: %@", @"message of panel when an item cannot be deleted");
 			
 			// Try to provide a more helpful message
@@ -2235,7 +2236,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 			}
 			
 			[alert setMessageText:NSLocalizedString(@"Error", @"error")];
-			[alert setInformativeText:[NSString stringWithFormat:userMessage, [filteredTables objectAtIndex:currentIndex], [mySQLConnection lastErrorMessage]]];
+			[alert setInformativeText:[NSString stringWithFormat:userMessage, [filteredTables objectAtIndex:currentIndex], [postgresConnection lastErrorMessage]]];
 			[alert setAlertStyle:NSWarningAlertStyle];
 			
 			if ([indexes indexLessThanIndex:currentIndex] == NSNotFound) {
@@ -2252,7 +2253,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	}
 	
 	if ([force boolValue]) {
-		[mySQLConnection queryString:@"SET FOREIGN_KEY_CHECKS = 1"];
+		[postgresConnection execute:@"SET FOREIGN_KEY_CHECKS = 1"];
 	}
 
 	// Remove the isolated 'current selection' item for filtered lists if appropriate
@@ -2297,16 +2298,16 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 
 	while (currentIndex != NSNotFound)
 	{
-		[mySQLConnection queryString:[NSString stringWithFormat: @"TRUNCATE TABLE %@", [[filteredTables objectAtIndex:currentIndex] backtickQuotedString]]];
+		[postgresConnection execute:[NSString stringWithFormat: @"TRUNCATE TABLE %@", [[filteredTables objectAtIndex:currentIndex] backtickQuotedString]]];
 
 		// Couldn't truncate table
-		if ([mySQLConnection queryErrored]) {
+		if ([postgresConnection queryErrored]) {
 			NSAlert *alert = [NSAlert alertWithMessageText:NSLocalizedString(@"Error truncating table", @"error truncating table message")
 											 defaultButton:NSLocalizedString(@"OK", @"OK button")
 										   alternateButton:nil
 											   otherButton:nil
 								 informativeTextWithFormat:NSLocalizedString(@"An error occurred while trying to truncate the table '%@'.\n\nMySQL said: %@", @"error truncating table informative message"),
-									[filteredTables objectAtIndex:currentIndex], [mySQLConnection lastErrorMessage]];
+									[filteredTables objectAtIndex:currentIndex], [postgresConnection lastErrorMessage]];
 
 			[alert setAlertStyle:NSCriticalAlertStyle];
 			
@@ -2350,11 +2351,11 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	NSString *tableName = [tableNameField stringValue];
 
 	// Ensure the use of UTF8 when creating new tables
-	BOOL changeEncoding = ![[mySQLConnection encoding] isEqualToString:@"utf8"];
+	BOOL changeEncoding = ![[postgresConnection encoding] isEqualToString:@"utf8"];
 	
 	if (changeEncoding) {
-		[mySQLConnection storeEncodingForRestoration];
-		[mySQLConnection setEncoding:@"utf8"];
+		[postgresConnection storeEncodingForRestoration];
+		[postgresConnection setEncoding:@"utf8"];
 	}
 
 	// If there is an encoding selected other than the default we must specify it in CREATE TABLE statement
@@ -2375,9 +2376,9 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	NSString *createStatement = [NSString stringWithFormat:@"CREATE TABLE %@ (id INT(11) UNSIGNED NOT NULL%@) %@ %@ %@", [tableName backtickQuotedString], [tableType isEqualToString:@"CSV"] ? @"" : @" PRIMARY KEY AUTO_INCREMENT", charSetStatement, collationStatement, engineStatement];
 
 	// Create the table
-	[mySQLConnection queryString:createStatement];
+	[postgresConnection execute:createStatement];
 
-	if (![mySQLConnection queryErrored]) {
+	if (![postgresConnection queryErrored]) {
 
 		// Table creation was successful - insert the new item into the tables list and select it.
 		NSInteger addItemAtIndex = NSNotFound;
@@ -2440,9 +2441,9 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 		SPBeginAlertSheet(NSLocalizedString(@"Error adding new table", @"error adding new table message"),
 						  NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self,
 						  @selector(sheetDidEnd:returnCode:contextInfo:), SPAddRow,
-						  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to add the new table '%@'.\n\nMySQL said: %@", @"error adding new table informative message"), tableName, [mySQLConnection lastErrorMessage]]);
+						  [NSString stringWithFormat:NSLocalizedString(@"An error occurred while trying to add the new table '%@'.\n\nMySQL said: %@", @"error adding new table informative message"), tableName, [postgresConnection lastErrorMessage]]);
 
-		if (changeEncoding) [mySQLConnection restoreStoredEncoding];
+		if (changeEncoding) [postgresConnection restoreStoredEncoding];
 		
 		[[tablesListView onMainThread] reloadData];
 	}
@@ -2495,7 +2496,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	}
 
 	// Get table/view structure
-	SPMySQLResult *queryResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE %@ %@",
+	PGPostgresResult *queryResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW CREATE %@ %@",
 												[tableType uppercaseString],
 												[[filteredTables objectAtIndex:[tablesListView selectedRow]] backtickQuotedString]
 												]];
@@ -2505,7 +2506,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 
 		//error while getting table structure
 		SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-						  [NSString stringWithFormat:NSLocalizedString(@"Couldn't get create syntax.\nMySQL said: %@", @"message of panel when table information cannot be retrieved"), [mySQLConnection lastErrorMessage]]);
+						  [NSString stringWithFormat:NSLocalizedString(@"Couldn't get create syntax.\nMySQL said: %@", @"message of panel when table information cannot be retrieved"), [postgresConnection lastErrorMessage]]);
 
     } else {
 		//insert new table name in create syntax and create new table
@@ -2517,7 +2518,7 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 			[scanner scanUpToString:@"AS" intoString:nil];
 			[scanner scanUpToString:@"" intoString:&scanString];
 			[scanner release];
-			[mySQLConnection queryString:[NSString stringWithFormat:@"CREATE VIEW %@ %@", [[copyTableNameField stringValue] backtickQuotedString], scanString]];
+			[postgresConnection execute:[NSString stringWithFormat:@"CREATE VIEW %@ %@", [[copyTableNameField stringValue] backtickQuotedString], scanString]];
 		}
 		else if(tblType == SPTableTypeTable){
 			scanner = [[NSScanner alloc] initWithString:[[queryResult getRowAsDictionary] objectForKey:@"Create Table"]];
@@ -2534,25 +2535,25 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 				scanString = [scanString stringByReplacingOccurrencesOfRegex:[NSString stringWithFormat:@"AUTO_INCREMENT=[0-9]+ "] withString:@""];
 			}
 
-			[mySQLConnection queryString:[NSString stringWithFormat:@"CREATE TABLE %@ %@", [[copyTableNameField stringValue] backtickQuotedString], scanString]];
+			[postgresConnection execute:[NSString stringWithFormat:@"CREATE TABLE %@ %@", [[copyTableNameField stringValue] backtickQuotedString], scanString]];
 		}
 		else if(tblType == SPTableTypeFunc || tblType == SPTableTypeProc)
 		{
 			// get the create syntax
-			SPMySQLResult *theResult;
+			PGPostgresResult *theResult;
 			
 			if(selectedTableType == SPTableTypeProc)
-				theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE PROCEDURE %@", [selectedTableName backtickQuotedString]]];
+				theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW CREATE PROCEDURE %@", [selectedTableName backtickQuotedString]]];
 			else if([self tableType] == SPTableTypeFunc)
-				theResult = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE FUNCTION %@", [selectedTableName backtickQuotedString]]];
+				theResult = [postgresConnection execute:[NSString stringWithFormat:@"SHOW CREATE FUNCTION %@", [selectedTableName backtickQuotedString]]];
 			else
 				return;
 
 			// Check for errors, only displaying if the connection hasn't been terminated
-			if ([mySQLConnection queryErrored]) {
-				if ([mySQLConnection isConnected]) {
+			if ([postgresConnection queryErrored]) {
+				if ([postgresConnection isConnected]) {
 					SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-									  [NSString stringWithFormat:NSLocalizedString(@"An error occured while retrieving the create syntax for '%@'.\nMySQL said: %@", @"message of panel when create syntax cannot be retrieved"), selectedTableName, [mySQLConnection lastErrorMessage]]);
+									  [NSString stringWithFormat:NSLocalizedString(@"An error occured while retrieving the create syntax for '%@'.\nMySQL said: %@", @"message of panel when create syntax cannot be retrieved"), selectedTableName, [postgresConnection lastErrorMessage]]);
 				}
 				return;
 			}
@@ -2561,30 +2562,30 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 			NSString *tableSyntax = [[theResult getRowAsArray] objectAtIndex:2];
 
 			// replace the old name by the new one and drop the old one
-			[mySQLConnection queryString:[tableSyntax stringByReplacingOccurrencesOfRegex:[NSString stringWithFormat:@"(?<=%@ )(`[^`]+?`)", [tableType uppercaseString]] withString:[[copyTableNameField stringValue] backtickQuotedString]]];
+			[postgresConnection execute:[tableSyntax stringByReplacingOccurrencesOfRegex:[NSString stringWithFormat:@"(?<=%@ )(`[^`]+?`)", [tableType uppercaseString]] withString:[[copyTableNameField stringValue] backtickQuotedString]]];
 
-			if ([mySQLConnection queryErrored]) {
+			if ([postgresConnection queryErrored]) {
 				SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-								  [NSString stringWithFormat:NSLocalizedString(@"Couldn't duplicate '%@'.\nMySQL said: %@", @"message of panel when an item cannot be renamed"), [copyTableNameField stringValue], [mySQLConnection lastErrorMessage]]);
+								  [NSString stringWithFormat:NSLocalizedString(@"Couldn't duplicate '%@'.\nMySQL said: %@", @"message of panel when an item cannot be renamed"), [copyTableNameField stringValue], [postgresConnection lastErrorMessage]]);
 			}
 
 		}
 
-        if ([mySQLConnection queryErrored]) {
+        if ([postgresConnection queryErrored]) {
 			//error while creating new table
 			SPBeginAlertSheet(NSLocalizedString(@"Error", @"error"), NSLocalizedString(@"OK", @"OK button"), nil, nil, [tableDocumentInstance parentWindow], self, nil, nil,
-							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't create '%@'.\nMySQL said: %@", @"message of panel when table cannot be created"), [copyTableNameField stringValue], [mySQLConnection lastErrorMessage]]);
+							  [NSString stringWithFormat:NSLocalizedString(@"Couldn't create '%@'.\nMySQL said: %@", @"message of panel when table cannot be created"), [copyTableNameField stringValue], [postgresConnection lastErrorMessage]]);
         } else {
 
             if (copyTableContent) {
 				//copy table content
-                [mySQLConnection queryString:[NSString stringWithFormat:
+                [postgresConnection execute:[NSString stringWithFormat:
 											  @"INSERT INTO %@ SELECT * FROM %@",
 											  [[copyTableNameField stringValue] backtickQuotedString],
 											  [selectedTableName backtickQuotedString]
 											  ]];
 
-                if ([mySQLConnection queryErrored]) {
+                if ([postgresConnection queryErrored]) {
                     SPBeginAlertSheet(
 									  NSLocalizedString(@"Warning", @"warning"),
 									  NSLocalizedString(@"OK", @"OK button"),
@@ -2682,10 +2683,10 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 	//check if we are trying to rename a TABLE or a VIEW
 	if (tableType == SPTableTypeView || tableType == SPTableTypeTable) {
 		// we can use the rename table statement
-		[mySQLConnection queryString:[NSString stringWithFormat:@"RENAME TABLE %@ TO %@", [oldTableName backtickQuotedString], [newTableName backtickQuotedString]]];
+		[postgresConnection execute:[NSString stringWithFormat:@"RENAME TABLE %@ TO %@", [oldTableName backtickQuotedString], [newTableName backtickQuotedString]]];
 		// check for errors
-		if ([mySQLConnection queryErrored]) {
-			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming '%@'.\n\nMySQL said: %@", @"rename table error informative message"), oldTableName, [mySQLConnection lastErrorMessage]];
+		if ([postgresConnection queryErrored]) {
+			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming '%@'.\n\nMySQL said: %@", @"rename table error informative message"), oldTableName, [postgresConnection lastErrorMessage]];
 		}
 		
 		return;
@@ -2704,9 +2705,9 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 			default: break;
 		}
 
-		SPMySQLResult *theResult  = [mySQLConnection queryString:[NSString stringWithFormat:@"SHOW CREATE %@ %@", stringTableType, [oldTableName backtickQuotedString] ] ];
-		if ([mySQLConnection queryErrored]) {
-			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't retrieve the syntax for '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't retrieve syntax"), oldTableName, [mySQLConnection lastErrorMessage]];
+		PGPostgresResult *theResult  = [postgresConnection execute:[NSString stringWithFormat:@"SHOW CREATE %@ %@", stringTableType, [oldTableName backtickQuotedString] ] ];
+		if ([postgresConnection queryErrored]) {
+			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't retrieve the syntax for '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't retrieve syntax"), oldTableName, [postgresConnection lastErrorMessage]];
 		}
 		[theResult setReturnDataAsStrings:YES];
 		NSString *oldCreateSyntax = [[theResult getRowAsArray] objectAtIndex:2];
@@ -2718,14 +2719,14 @@ static NSString *SPDuplicateTable = @"SPDuplicateTable";
 		}
 		NSString *newCreateSyntax = [oldCreateSyntax stringByReplacingCharactersInRange: rangeOfProcedureName
 			withString: [NSString stringWithFormat:@"%@ %@", stringTableType, [newTableName backtickQuotedString] ] ];
-		[mySQLConnection queryString: newCreateSyntax];
-		if ([mySQLConnection queryErrored]) {
-			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't recreate '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't recreate procedure"), oldTableName, [mySQLConnection lastErrorMessage]];
+		[postgresConnection execute: newCreateSyntax];
+		if ([postgresConnection queryErrored]) {
+			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't recreate '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't recreate procedure"), oldTableName, [postgresConnection lastErrorMessage]];
 		}
 
-		[mySQLConnection queryString: [NSString stringWithFormat: @"DROP %@ %@", stringTableType, [oldTableName backtickQuotedString]]];
-		if ([mySQLConnection queryErrored]) {
-			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't delete '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't delete old procedure"), oldTableName, [mySQLConnection lastErrorMessage]];
+		[postgresConnection execute: [NSString stringWithFormat: @"DROP %@ %@", stringTableType, [oldTableName backtickQuotedString]]];
+		if ([postgresConnection queryErrored]) {
+			[NSException raise:@"MySQL Error" format:NSLocalizedString(@"An error occured while renaming. I couldn't delete '%@'.\n\nMySQL said: %@", @"rename precedure/function error - can't delete old procedure"), oldTableName, [postgresConnection lastErrorMessage]];
 		}
 		return;
 	}
