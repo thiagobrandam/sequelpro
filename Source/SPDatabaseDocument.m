@@ -6282,7 +6282,8 @@ static NSString *SPAlterDatabaseAction = @"SPAlterDatabase";
 
 - (void)connectionEstablished:(PGPostgresConnection *)connection
 {
-	NSLog(@"PG Connection Established");
+	//NSLog(@"PG Connection Established");
+	[connectionController postgresConnectionEstablished];
 }
 
 - (void)connection:(PGPostgresConnection *)connection notice:(NSString *)notice
