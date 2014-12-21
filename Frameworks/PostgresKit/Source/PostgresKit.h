@@ -24,7 +24,6 @@
 #import "PGPostgresStatement.h"
 #import "PGPostgresException.h"
 #import "PGPostgresConnection.h"
-#import "PGPostgresConnection+Querying_and_Preparation.h"
 #import "PGPostgresConnectionProxy.h"
 #import "PGPostgresConnectionUtils.h"
 #import "PGPostgresConnectionQueryExecution.h"

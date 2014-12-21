@@ -60,8 +60,6 @@
 		17E595F214F3058F0054EE08 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17E595F114F3058F0054EE08 /* Foundation.framework */; };
 		17F7963116150C0100E21D82 /* PGPostgresTypeBinaryHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 17F7962F16150C0100E21D82 /* PGPostgresTypeBinaryHandler.h */; };
 		17F7963216150C0100E21D82 /* PGPostgresTypeBinaryHandler.m in Sources */ = {isa = PBXBuildFile; fileRef = 17F7963016150C0100E21D82 /* PGPostgresTypeBinaryHandler.m */; };
-		AF42FB3E1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.h in Headers */ = {isa = PBXBuildFile; fileRef = AF42FB3C1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.h */; };
-		AF42FB3F1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.m in Sources */ = {isa = PBXBuildFile; fileRef = AF42FB3D1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.m */; };
 		AFAF96A81A32A9610018F735 /* PGPostgresConnectionProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = AFAF96A71A32A3220018F735 /* PGPostgresConnectionProxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
@@ -139,8 +137,6 @@
 		17F7963016150C0100E21D82 /* PGPostgresTypeBinaryHandler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PGPostgresTypeBinaryHandler.m; sourceTree = "<group>"; };
 		8DC2EF5A0486A6940098B216 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Resources/Info.plist; sourceTree = "<group>"; };
 		8DC2EF5B0486A6940098B216 /* PostgresKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PostgresKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		AF42FB3C1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "PGPostgresConnection+Querying_and_Preparation.h"; sourceTree = "<group>"; };
-		AF42FB3D1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "PGPostgresConnection+Querying_and_Preparation.m"; sourceTree = "<group>"; };
 		AFAF96A71A32A3220018F735 /* PGPostgresConnectionProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PGPostgresConnectionProxy.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -380,7 +376,6 @@
 		173D513315BBE4230007F267 /* Connection */ = {
 			isa = PBXGroup;
 			children = (
-				AF42FB3B1A332F8B00FAE73E /* Categories */,
 				173D4E9515BAB2A80007F267 /* PGPostgresConnection.h */,
 				173D4E9615BAB2A80007F267 /* PGPostgresConnection.m */,
 				1731F50515F369FE00D973EB /* Encoding */,
@@ -417,15 +412,6 @@
 			name = Protocols;
 			sourceTree = "<group>";
 		};
-		AF42FB3B1A332F8B00FAE73E /* Categories */ = {
-			isa = PBXGroup;
-			children = (
-				AF42FB3C1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.h */,
-				AF42FB3D1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.m */,
-			);
-			name = Categories;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -453,7 +439,6 @@
 				177AC6B015C5460C00A3658D /* PGPostgresConnectionQueryPreparation.h in Headers */,
 				177C9BAB15CD37E000128642 /* PGPostgresConnectionEncoding.h in Headers */,
 				1731F02B15EE09E000D973EB /* PGPostgresConnectionParameters.h in Headers */,
-				AF42FB3E1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.h in Headers */,
 				1731F10815F1A52B00D973EB /* PGPostgresTypeDateTimeHandler.h in Headers */,
 				1731F52E15F48BA500D973EB /* PGPostgresError.h in Headers */,
 				1724CC9215FB4CC200AB2291 /* PGPostgresTimeTZ.h in Headers */,
@@ -557,7 +542,6 @@
 				177AC66A15C53CB000A3658D /* PGPostgresConnectionQueryExecution.m in Sources */,
 				177AC6B115C5460C00A3658D /* PGPostgresConnectionQueryPreparation.m in Sources */,
 				177C9BAC15CD37E000128642 /* PGPostgresConnectionEncoding.m in Sources */,
-				AF42FB3F1A332FA100FAE73E /* PGPostgresConnection+Querying_and_Preparation.m in Sources */,
 				1731F02C15EE09E000D973EB /* PGPostgresConnectionParameters.m in Sources */,
 				1731F10915F1A52B00D973EB /* PGPostgresTypeDateTimeHandler.m in Sources */,
 				1731F52F15F48BA500D973EB /* PGPostgresError.m in Sources */,

@@ -335,6 +335,10 @@ static void _PGPostgresConnectionNoticeProcessor(void *arg, const char *message)
     {
         NSLog(@"Poll failed");
         
+        if (_connectionError) [_connectionError release];
+        
+        _connectionError = [[NSString alloc] initWithUTF8String:PQerrorMessage(_connection)];
+                
         if (_delegate && [_delegate respondsToSelector:@selector(connectionFailed:)]) {
             [_delegate performSelectorOnMainThread:@selector(connectionFailed:) withObject:self waitUntilDone:NO];
         }
